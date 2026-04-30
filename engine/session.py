@@ -9,35 +9,35 @@ from engine.logger import SessionLogger
 
 @dataclass
 class SessionState:
-    user_id:       str
-    lesson_id:     int
-    native_lang:   str
-    target_lang:   str
-    current_step:  int   = 1
-    phrase_index:  int   = 0
-    step_start_ts: float = field(default_factory=time.time)
-    lesson_complete: bool = False
+    user_id:         str
+    lesson_id:       int
+    native_lang:     str
+    target_lang:     str
+    language_pair:   str   = ""     # e.g. "en-uk"
+    current_step:    int   = 1
+    phrase_index:    int   = 0
+    step_start_ts:   float = field(default_factory=time.time)
+    lesson_complete: bool  = False
 
 
 class LessonSession:
-    def __init__(self, user_id, lesson_df, lesson_id, native_lang, target_lang):
-        self.df      = lesson_df.reset_index(drop=True)
-        self.logger  = SessionLogger(user_id)
-        self.state   = SessionState(
+    def __init__(self, user_id, lesson_df, lesson_id,
+                 native_lang, target_lang, language_pair=""):
+        self.df     = lesson_df.reset_index(drop=True)
+        self.logger = SessionLogger(user_id, language_pair=language_pair)
+        self.state  = SessionState(
             user_id=user_id, lesson_id=lesson_id,
             native_lang=native_lang, target_lang=target_lang,
+            language_pair=language_pair,
         )
-        # Tracks when each step started — set explicitly from app.py
         self._step_start: dict[int, float] = {}
 
     # ── Step timing ──────────────────────────────────────────────────────
 
     def start_step(self, step: int):
-        """Call this when a step begins to start its timer."""
         self._step_start[step] = time.time()
 
     def elapsed_ms(self, step: int) -> int:
-        """Milliseconds since start_step(step) was called."""
         start = self._step_start.get(step, self.state.step_start_ts)
         return int((time.time() - start) * 1000)
 
@@ -84,18 +84,9 @@ class LessonSession:
     def score(self, user_input: str, expected: str,
               step: int | None = None,
               phrase_id: int | None = None) -> dict:
-        """
-        Evaluate user_input against expected and log the result.
-
-        step      — pass explicitly from app.py (e.g. 1, 3, 6...)
-        phrase_id — pass phrase["phrase_id"] explicitly, or None for whole-lesson steps
-        """
-        actual_step = step if step is not None else self.state.current_step
-        elapsed     = self.elapsed_ms(actual_step)
-
-        result = evaluate(user_input, expected)
-
-        # For whole-lesson steps (1,4,6,7) phrase_id=0 means "whole lesson"
+        actual_step   = step if step is not None else self.state.current_step
+        elapsed       = self.elapsed_ms(actual_step)
+        result        = evaluate(user_input, expected)
         log_phrase_id = phrase_id if phrase_id is not None else 0
 
         self.logger.log(
@@ -111,10 +102,13 @@ class LessonSession:
         return result
 
     def score_phrase(self, user_input: str, phrase: dict, step: int) -> dict:
-        """Convenience wrapper for single-phrase scoring."""
         return self.score(
             user_input = user_input,
             expected   = phrase["target"],
             step       = step,
             phrase_id  = int(phrase.get("phrase_id", 0)),
         )
+
+    def complete(self):
+        """Call when lesson is fully done — saves progress to Google Sheets."""
+        self.logger.complete_lesson(self.state.lesson_id, step=7)
