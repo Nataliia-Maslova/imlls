@@ -20,7 +20,7 @@ from engine.session import LessonSession
 from engine.scorer  import evaluate
 from engine.tts     import get_audio_path
 from engine.stt     import transcribe_bytes, whisper_available
-from engine.logger  import SessionLogger
+from engine.logger  import SessionLogger, get_last_lesson, save_progress
 
 DB_PATH   = ROOT / "data" / "imlls_database.xlsx"
 LANGUAGES = ["English", "Ukrainian", "Spanish", "Korean"]
@@ -53,7 +53,7 @@ html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 .prow:hover{background:#1a1a2a;}
 .pnum{font-family:'JetBrains Mono',monospace;color:#4040a0;font-size:.73rem;min-width:26px;}
 .pnat{color:#8888b8;flex:1;font-size:.93rem;}
-.ptgt{color:#e0e0ff;flex:1;font-size:.93rem;font-weight:500;}
+.ptgt{color:#9090b8;flex:1;font-size:.93rem;font-weight:500;}
 .phide{color:#2a2a4a;flex:1;font-style:italic;font-size:.82rem;}
 .spass{background:#0d2e1a;color:#40c070;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
 .sfail{background:#2e0d0d;color:#c04040;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
@@ -506,13 +506,48 @@ def render_complete(session: LessonSession):
       </p>
     </div>""", unsafe_allow_html=True)
 
-    c1, c2 = st.columns(2)
+    # Save progress when lesson is completed
+    if not st.session_state.get("_progress_saved"):
+        session.complete()
+        st.session_state["_progress_saved"] = True
+
+    c1, c2, c3 = st.columns(3)
     with c1:
         if st.button("🔄 Redo lesson", use_container_width=True, type="primary"):
-            _clear_lesson(); st.session_state["lesson_step"] = 1; st.rerun()
+            st.session_state.pop("_progress_saved", None)
+            _clear_lesson()
+            st.session_state["lesson_step"] = 1
+            st.rerun()
     with c2:
-        if st.button("📚 New lesson", use_container_width=True):
-            _clear_all(); st.rerun()
+        if st.button("▶ Next lesson", use_container_width=True):
+            # Load next lesson automatically
+            sess   = st.session_state["session"]
+            state  = sess.state
+            try:
+                df_all    = load_phrases(str(DB_PATH), state.native_lang, state.target_lang)
+                lessons   = get_available_lessons(df_all)
+                next_id   = state.lesson_id + 1
+                if next_id in lessons:
+                    lang_pair = state.language_pair
+                    lesson_df = get_lesson(df_all, next_id)
+                    st.session_state.pop("_progress_saved", None)
+                    _clear_lesson()
+                    st.session_state.update({
+                        "session":     LessonSession(state.user_id, lesson_df, next_id,
+                                                     state.native_lang, state.target_lang,
+                                                     language_pair=lang_pair),
+                        "lesson_step": 1,
+                    })
+                    st.rerun()
+                else:
+                    st.info("This was the last lesson!")
+            except Exception as e:
+                st.error(f"Error loading next lesson: {e}")
+    with c3:
+        if st.button("📚 Choose lesson", use_container_width=True):
+            st.session_state.pop("_progress_saved", None)
+            _clear_all()
+            st.rerun()
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -539,18 +574,36 @@ def render_setup():
     except Exception as e:
         st.error(f"Error: {e}"); st.stop()
 
-    lessons   = get_available_lessons(df)
-    lesson_id = st.selectbox("📚 Lesson", lessons, format_func=lambda x: f"Lesson {x}")
+    lessons      = get_available_lessons(df)
+    lang_pair    = f"{WHISPER_LANG.get(native,'?')}-{WHISPER_LANG.get(target,'?')}"
+    user_id      = st.text_input("👤 Your name", value="student1")
+
+    # Auto-select next lesson based on saved progress
+    last_done    = get_last_lesson(user_id, lang_pair) if user_id else None
+    default_idx  = 0
+    if last_done is not None:
+        next_lesson = last_done + 1
+        if next_lesson in lessons:
+            default_idx = lessons.index(next_lesson)
+            st.info(f"▶ Continuing from Lesson {next_lesson} (last completed: {last_done})")
+        else:
+            st.success("🎉 All lessons completed for this language pair!")
+
+    lesson_id = st.selectbox("📚 Lesson", lessons,
+                              index=default_idx,
+                              format_func=lambda x: f"Lesson {x}")
     lesson_df = get_lesson(df, lesson_id)
-    st.info(f"**{len(lesson_df)} phrases** in this lesson.")
-    user_id = st.text_input("👤 Your name", value="student1")
+    st.caption(f"**{len(lesson_df)} phrases** · pair: `{lang_pair}`")
 
     if st.button("▶ Start Lesson", type="primary", use_container_width=True):
         st.session_state.update({
-            "session":      LessonSession(user_id, lesson_df, lesson_id, native, target),
+            "session":      LessonSession(user_id, lesson_df, lesson_id,
+                                          native, target,
+                                          language_pair=lang_pair),
             "lesson_step":  1,
             "tts_lang":     TTS_LANG.get(target, "en"),
             "wh_lang":      WHISPER_LANG.get(target),
+            "lang_pair":    lang_pair,
         })
         st.rerun()
 
@@ -574,14 +627,17 @@ STEPS = {1: step1, 2: step2, 3: step3, 4: step4, 5: step5, 6: step6, 7: step7}
 
 def main():
     with st.sidebar:
-        if "lesson_step" in st.session_state:
-            st.markdown(f"**Step {st.session_state['lesson_step']} / 7**")
-            if "session" in st.session_state:
-                logs = st.session_state["session"].logger.read_all()
-                if logs:
-                    p = sum(1 for r in logs if str(r.get("success"))=="1")
-                    st.metric("Checks", len(logs))
-                    st.metric("Pass rate", f"{p/len(logs)*100:.0f}%")
+        if "lesson_step" in st.session_state and "session" in st.session_state:
+            sess  = st.session_state["session"]
+            state = sess.state
+            st.markdown(f"**Lesson {state.lesson_id}** · Step {st.session_state['lesson_step']} / 7")
+            st.caption(f"`{state.language_pair}`")
+            logs = sess.logger.read_all()
+            if logs:
+                p = sum(1 for r in logs if str(r.get("success"))=="1")
+                st.metric("Checks", len(logs))
+                st.metric("Pass rate", f"{p/len(logs)*100:.0f}%")
+            st.markdown("---")
         if st.button("🏠 Main menu"): _clear_all(); st.rerun()
 
     if "lesson_step" not in st.session_state:
