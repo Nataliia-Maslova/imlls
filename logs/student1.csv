@@ -23,3 +23,13 @@ timestamp,user_id,lesson_id,phrase_id,step,similarity,response_time_ms,attempts,
 2026-04-30T19:18:47.571802,student1,en-es,7,0,4,0.8654,1241,1,1,lesson
 2026-04-30T19:19:57.648385,student1,en-es,7,0,6,0.8741,1769,1,1,lesson
 2026-04-30T19:20:55.984428,student1,en-es,7,0,7,0.8827,1533,1,1,lesson
+2026-05-02T11:25:17.040197,student1,uk-es,22,0,1,0.9279,8111,1,1,lesson
+2026-05-02T11:25:35.441647,student1,uk-es,22,169,3,1.0,5,1,1,lesson
+2026-05-02T11:25:39.612229,student1,uk-es,22,170,3,1.0,3,1,1,lesson
+2026-05-02T11:25:46.496189,student1,uk-es,22,171,3,1.0,0,1,1,lesson
+2026-05-02T11:25:52.709348,student1,uk-es,22,172,3,1.0,3,1,1,lesson
+2026-05-02T11:25:58.646419,student1,uk-es,22,173,3,1.0,0,1,1,lesson
+2026-05-02T11:26:05.636285,student1,uk-es,22,174,3,1.0,5,1,1,lesson
+2026-05-02T11:26:11.844899,student1,uk-es,22,175,3,1.0,2,1,1,lesson
+2026-05-02T11:26:16.776361,student1,uk-es,22,176,3,1.0,0,1,1,lesson
+2026-05-02T11:27:09.221558,student1,uk-es,22,0,7,0.9546,1640,1,1,lesson

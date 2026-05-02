@@ -53,14 +53,14 @@ class LessonSession:
         self.state.current_step  += 1
         self.state.phrase_index   = 0
         self.state.step_start_ts  = time.time()
-        if self.state.current_step > 7:
+        if self.state.current_step > 8:
             self.state.lesson_complete = True
 
     def go_to_step(self, step: int):
         self.state.current_step  = step
         self.state.phrase_index  = 0
         self.state.step_start_ts = time.time()
-        if step > 7:
+        if step > 8:
             self.state.lesson_complete = True
 
     # ── Getters ──────────────────────────────────────────────────────────

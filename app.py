@@ -19,7 +19,8 @@ from engine.loader  import load_phrases, get_lesson, get_available_lessons, TTS_
 from engine.session import LessonSession
 from engine.scorer  import evaluate
 from engine.tts     import get_audio_path
-from engine.stt     import transcribe_bytes, whisper_available
+from engine.stt      import transcribe_bytes, whisper_available
+from engine.analyzer import analyze_phrase, models_available
 from engine.logger  import SessionLogger, get_last_lesson, save_progress
 
 DB_PATH   = ROOT / "data" / "imlls_database.xlsx"
@@ -52,7 +53,7 @@ html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 .prow:last-child{border-bottom:none;}
 .prow:hover{background:#1a1a2a;}
 .pnum{font-family:'JetBrains Mono',monospace;color:#4040a0;font-size:.73rem;min-width:26px;}
-.pnat{color:#8888b8;flex:1;font-size:.93rem;}
+.pnat{color:#5a5a80;flex:1;font-size:.93rem;}
 .ptgt{color:#9090b8;flex:1;font-size:.93rem;font-weight:500;}
 .phide{color:#2a2a4a;flex:1;font-style:italic;font-size:.82rem;}
 .spass{background:#0d2e1a;color:#40c070;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
@@ -91,9 +92,9 @@ def audio_input(uid: str, label: str = "🎙️ Record") -> bytes | None:
 
 
 
-def recorder_html_with_timer(uid: str) -> str:
+"""def recorder_html_with_timer(uid: str) -> str:
     """Recorder that posts a message to trigger timer start in Python via session flag."""
-    return recorder_html(uid)  # Timer is started server-side when file is uploaded
+    return recorder_html(uid)  # Timer is started server-side when file is uploaded"""
 
 def autoplaylist_html(audio_paths, pause_secs):
     """JS component: plays a list of MP3s sequentially with custom pauses."""
@@ -286,7 +287,7 @@ def step3(session: LessonSession, tts_lang, wh_lang):
     if scores:
         done_html = "".join(
             f'<div class="prow"><span class="pnum">{i+1:02d}</span>'
-            f'<span style="color:{"#40c070" if v else "#c04040"};flex:1">'
+            f'<span style="color:{"#2a7a4a" if v else "#7a2a2a"};flex:1">'
             f'{"✓" if v else "✗"} {phrases[i]["target"]}</span></div>'
             for i, v in sorted(scores.items())
         )
@@ -608,6 +609,219 @@ def render_setup():
         st.rerun()
 
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Step 8 — Creative Generation (structure + semantic analysis)
+# ═══════════════════════════════════════════════════════════════════════════
+def step8(session: LessonSession, tts_lang, wh_lang):
+    session.start_step(8)
+    step_hdr(8, "Create Your Own Phrases",
+             "Make up 3 new phrases using the patterns from this lesson. "
+             "The system will analyze how close they are in structure and meaning.",
+             total_steps=8)
+
+    phrases      = session.phrases()
+    lesson_texts = [p["target"] for p in phrases]
+
+    # ── Model availability warning ────────────────────────────────────────
+    if not models_available():
+        st.warning(
+            "⚠️ `sentence-transformers` not installed.  \n"
+            "Run: `pip install sentence-transformers nltk`"
+        )
+        if st.button("Skip Step 8 →", use_container_width=True):
+            return True
+        return False
+
+    # ── Reference table ───────────────────────────────────────────────────
+    with st.expander("📚 Reference — lesson phrases", expanded=False):
+        phrase_table(phrases, show_native=True, show_target=True)
+
+    st.markdown("---")
+
+    # ── How many phrases to generate ─────────────────────────────────────
+    n_phrases = st.slider("How many phrases to create?", 1, 5, 3, key="s8_n")
+
+    # ── Input: voice or text ──────────────────────────────────────────────
+    input_mode = st.radio("Input method", ["🎙️ Voice", "⌨️ Text"],
+                          horizontal=True, key="s8_mode")
+
+    results = st.session_state.get("s8_results", [])
+
+    if input_mode == "🎙️ Voice":
+        st.markdown(f"Record yourself saying **{n_phrases} original phrase(s)**.")
+        audio = audio_input("s8_voice")
+
+        if st.button("Submit & Analyze", type="primary",
+                     use_container_width=True, key="s8_submit_voice"):
+            if not audio:
+                st.warning("Please record audio first.")
+            elif not whisper_available():
+                st.warning("Whisper not installed.")
+            else:
+                with st.spinner("Transcribing…"):
+                    raw = transcribe_bytes(audio, language=wh_lang)
+
+                # Split transcription into individual phrases by punctuation
+                import re
+                candidates = [s.strip() for s in re.split(r"[.!?]", raw) if len(s.strip()) > 3]
+                candidates = candidates[:n_phrases]
+
+                if not candidates:
+                    st.warning(f"Could not detect phrases. Transcribed: `{raw}`")
+                else:
+                    with st.spinner("Analyzing structure and meaning…"):
+                        results = []
+                        for phrase in candidates:
+                            analysis = analyze_phrase(phrase, lesson_texts,
+                                                      target_lang=wh_lang or "en")
+                            results.append({"phrase": phrase, "analysis": analysis})
+                    st.session_state["s8_results"] = results
+
+    else:
+        st.markdown(f"Type **{n_phrases} phrase(s)**, one per line.")
+        text_input = st.text_area(
+            "Your phrases:",
+            placeholder="a hot bottle\na new road\na little plan",
+            height=120,
+            key="s8_text_input",
+        )
+
+        if st.button("Submit & Analyze", type="primary",
+                     use_container_width=True, key="s8_submit_text"):
+            lines = [l.strip() for l in text_input.strip().splitlines() if l.strip()]
+            if not lines:
+                st.warning("Please enter at least one phrase.")
+            else:
+                lines = lines[:n_phrases]
+                with st.spinner("Analyzing structure and meaning…"):
+                    results = []
+                    for phrase in lines:
+                        analysis = analyze_phrase(phrase, lesson_texts,
+                                                  target_lang=wh_lang or "en")
+                        results.append({"phrase": phrase, "analysis": analysis})
+                st.session_state["s8_results"] = results
+
+    # ── Results display ───────────────────────────────────────────────────
+    if results:
+        st.markdown("---")
+        st.markdown("### 📊 Analysis Results")
+
+        VERDICT_COLOR = {
+            "excellent": "#40c070",
+            "good":      "#80c040",
+            "fair":      "#c0a040",
+            "weak":      "#c04040",
+        }
+        VERDICT_ICON = {
+            "excellent": "🟢",
+            "good":      "🟡",
+            "fair":      "🟠",
+            "weak":      "🔴",
+        }
+
+        for item in results:
+            phrase   = item["phrase"]
+            analysis = item["analysis"]
+            verdict  = analysis["verdict"]
+            combined = analysis["combined"]
+            color    = VERDICT_COLOR[verdict]
+            icon     = VERDICT_ICON[verdict]
+
+            with st.container():
+                st.markdown(
+                    f'''<div style="background:#13131e;border:1px solid #2a2a4a;
+                    border-radius:12px;padding:16px 20px;margin:10px 0;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                      <span style="color:#e0e0ff;font-size:1.05rem;font-weight:500;">
+                        "{phrase}"
+                      </span>
+                      <span style="color:{color};font-family:JetBrains Mono,monospace;
+                        font-size:.9rem;">{icon} {int(combined*100)}% {verdict}</span>
+                    </div></div>''',
+                    unsafe_allow_html=True,
+                )
+
+                sem     = analysis["semantic"]
+                struct  = analysis["structure"]
+
+                c1, c2 = st.columns(2)
+                with c1:
+                    sem_pct = int(sem["score"] * 100)
+                    st.markdown(
+                        f'''<div style="background:#0d1a2e;border-radius:8px;padding:12px 14px;">
+                        <div style="color:#6060a0;font-size:.75rem;margin-bottom:4px;">
+                          SEMANTIC SIMILARITY</div>
+                        <div style="color:#a0c0ff;font-size:1.3rem;font-weight:600;">
+                          {sem_pct}%</div>
+                        <div style="color:#505070;font-size:.78rem;margin-top:6px;">
+                          Closest: "{sem["best_match"]}"</div>
+                        </div>''',
+                        unsafe_allow_html=True,
+                    )
+                with c2:
+                    if struct:
+                        str_pct = int(struct["score"] * 100)
+                        u_pat   = " → ".join(struct["user_pattern"][:6])
+                        m_pat   = " → ".join(struct["match_pattern"][:6])
+                        st.markdown(
+                            f'''<div style="background:#0d2010;border-radius:8px;padding:12px 14px;">
+                            <div style="color:#406040;font-size:.75rem;margin-bottom:4px;">
+                              STRUCTURE MATCH</div>
+                            <div style="color:#80d080;font-size:1.3rem;font-weight:600;">
+                              {str_pct}%</div>
+                            <div style="color:#304830;font-size:.75rem;margin-top:6px;">
+                              Your pattern: {u_pat or "—"}</div>
+                            <div style="color:#304830;font-size:.75rem;">
+                              Lesson pattern: {m_pat or "—"}</div>
+                            </div>''',
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        st.markdown(
+                            '''<div style="background:#1a1a0d;border-radius:8px;padding:12px 14px;">
+                            <div style="color:#606040;font-size:.75rem;">
+                              Structure analysis available for English only.</div>
+                            </div>''',
+                            unsafe_allow_html=True,
+                        )
+
+                # Log each analyzed phrase
+                session.score(
+                    phrase,
+                    sem["best_match"],
+                    step=8,
+                    phrase_id=0,
+                )
+
+        # ── Overall lesson summary ────────────────────────────────────────
+        if results:
+            avg = sum(r["analysis"]["combined"] for r in results) / len(results)
+            st.markdown("---")
+            st.markdown(
+                f'''<div style="background:linear-gradient(135deg,#0d2e1a,#1a1a2e);
+                border:1px solid #304030;border-radius:12px;padding:20px;text-align:center;">
+                <div style="color:#808090;font-size:.85rem;">Average score for your phrases</div>
+                <div style="color:#a0d0ff;font-size:2rem;font-weight:600;margin:8px 0;">
+                  {int(avg*100)}%</div>
+                </div>''',
+                unsafe_allow_html=True,
+            )
+
+    # ── Navigation ────────────────────────────────────────────────────────
+    st.markdown("---")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("🔄 Try again", use_container_width=True, key="s8_retry"):
+            st.session_state.pop("s8_results", None)
+            st.rerun()
+    with c2:
+        if st.button("Complete Lesson ✓", type="primary",
+                     use_container_width=True, key="s8_complete"):
+            st.session_state.pop("s8_results", None)
+            return True
+    return False
+
 # ═══════════════════════════════════════════════════════════════════════════
 # State helpers
 # ═══════════════════════════════════════════════════════════════════════════
@@ -623,7 +837,7 @@ def _clear_all():
 # ═══════════════════════════════════════════════════════════════════════════
 # Main
 # ═══════════════════════════════════════════════════════════════════════════
-STEPS = {1: step1, 2: step2, 3: step3, 4: step4, 5: step5, 6: step6, 7: step7}
+STEPS = {1: step1, 2: step2, 3: step3, 4: step4, 5: step5, 6: step6, 7: step7, 8: step8}
 
 def main():
     with st.sidebar:
@@ -648,7 +862,7 @@ def main():
     wh   = st.session_state["wh_lang"]
     step = st.session_state["lesson_step"]
 
-    if step > 7 or sess.state.lesson_complete:
+    if step > 8 or sess.state.lesson_complete:
         render_complete(sess); return
 
     fn = STEPS.get(step)
