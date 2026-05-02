@@ -70,22 +70,41 @@ def _split_phrases(lesson_phrases: list[str]) -> list[str]:
 
 def _calibrate(raw_score: float, all_scores: list[float]) -> float:
     """
-    Normalize raw cosine similarity against the lesson's own score range.
+    Blend relative calibration with an absolute ceiling.
 
-    The idea: if the best possible score within this lesson is 0.72 and the
-    worst is 0.18, then a user score of 0.65 should map to ~87%, not 65%.
+    Step 1 — relative: normalize against lesson range so structural matches
+    score realistically even with novel vocabulary.
+    Step 2 — absolute cap: if raw score is very low, cap the final score
+    so unrelated phrases never reach "excellent".
 
-    Formula: (score - min) / (max - min), clamped to [0, 1].
-    A small floor ensures we never divide by zero.
+    Absolute ceilings (tuned for MiniLM multilingual):
+      raw < 0.20  → max 0.30  (clearly unrelated)
+      raw < 0.30  → max 0.55  (weak connection)
+      raw < 0.40  → max 0.75  (moderate connection)
+      raw >= 0.40 → no cap
     """
     if not all_scores:
         return raw_score
+
     lo = min(all_scores)
     hi = max(all_scores)
-    if hi - lo < 0.05:          # all phrases very similar — return raw
-        return raw_score
-    calibrated = (raw_score - lo) / (hi - lo)
-    return float(max(0.0, min(1.0, calibrated)))
+
+    if hi - lo < 0.05:
+        relative = raw_score
+    else:
+        relative = (raw_score - lo) / (hi - lo)
+        relative = float(max(0.0, min(1.0, relative)))
+
+    if raw_score < 0.20:
+        ceiling = 0.30
+    elif raw_score < 0.30:
+        ceiling = 0.55
+    elif raw_score < 0.40:
+        ceiling = 0.75
+    else:
+        ceiling = 1.0
+
+    return round(min(relative, ceiling), 4)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
