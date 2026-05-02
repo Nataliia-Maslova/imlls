@@ -93,7 +93,7 @@ def audio_input(uid: str, label: str = "🎙️ Record") -> bytes | None:
 
 
 """def recorder_html_with_timer(uid: str) -> str:
-    """Recorder that posts a message to trigger timer start in Python via session flag."""
+    Recorder that posts a message to trigger timer start in Python via session flag.
     return recorder_html(uid)  # Timer is started server-side when file is uploaded"""
 
 def autoplaylist_html(audio_paths, pause_secs):
