@@ -92,10 +92,6 @@ def audio_input(uid: str, label: str = "🎙️ Record") -> bytes | None:
 
 
 
-"""def recorder_html_with_timer(uid: str) -> str:
-    Recorder that posts a message to trigger timer start in Python via session flag.
-    return recorder_html(uid)  # Timer is started server-side when file is uploaded"""
-
 def autoplaylist_html(audio_paths, pause_secs):
     """JS component: plays a list of MP3s sequentially with custom pauses."""
     srcs = []
@@ -618,7 +614,7 @@ def step8(session: LessonSession, tts_lang, wh_lang):
     step_hdr(8, "Create Your Own Phrases",
              "Make up 3 new phrases using the patterns from this lesson. "
              "The system will analyze how close they are in structure and meaning.",
-             total_steps=8)
+             total=8)
 
     phrases      = session.phrases()
     lesson_texts = [p["target"] for p in phrases]
