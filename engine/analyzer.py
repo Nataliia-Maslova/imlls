@@ -196,25 +196,66 @@ def semantic_score(user_phrase: str, lesson_phrases: list[str]) -> dict:
 # Combined analysis
 # ═══════════════════════════════════════════════════════════════════════════
 
+def _vocab_penalty(user_phrase: str, lesson_phrases: list[str]) -> float:
+    """
+    Returns a penalty multiplier [0.6, 1.0] based on how many words
+    in the user phrase appear in the lesson vocabulary.
+
+    If most words are completely unknown → penalty up to 0.40 reduction.
+    This prevents random sentences from scoring high just by sentence
+    structure similarity.
+
+    Logic:
+      - Extract all unique words from lesson phrases (lowercase, no punct)
+      - Count what fraction of user words appear in lesson vocab
+      - coverage >= 0.5 → no penalty (1.0)
+      - coverage 0.2–0.5 → mild penalty (0.8–1.0)
+      - coverage < 0.2  → strong penalty (0.6)
+    """
+    import re
+    lesson_words = set()
+    for p in lesson_phrases:
+        lesson_words.update(re.findall(r'[a-záéíóúüñàèìòùçäöü]+', p.lower()))
+
+    user_words = re.findall(r'[a-záéíóúüñàèìòùçäöü]+', user_phrase.lower())
+    if not user_words:
+        return 1.0
+
+    coverage = sum(1 for w in user_words if w in lesson_words) / len(user_words)
+
+    if coverage >= 0.5:
+        return 1.0
+    elif coverage >= 0.2:
+        # linear interpolation: 0.2→0.8, 0.5→1.0
+        return round(0.8 + (coverage - 0.2) / 0.3 * 0.2, 3)
+    else:
+        return 0.6
+
+
 def analyze_phrase(user_phrase: str,
                    lesson_phrases: list[str],
-                   target_lang: str = "en") -> dict:
+                   target_lang: str = "en",
+                   known_words: list[str] | None = None) -> dict:
     """
     Full analysis combining structure (EN only) and semantic scores.
-    Both scores are calibrated relative to the lesson's own range.
+    Applies vocabulary penalty for words outside the lesson.
     """
     is_english = target_lang in ("en", "English")
     sem        = semantic_score(user_phrase, lesson_phrases)
 
     if is_english:
         struct   = structure_score(user_phrase, lesson_phrases)
-        # 40% structure + 60% semantic
-        combined = round(0.4 * struct["score"] + 0.6 * sem["score"], 4)
+        base     = round(0.4 * struct["score"] + 0.6 * sem["score"], 4)
     else:
         struct   = None
-        combined = sem["score"]
+        base     = sem["score"]
 
-    # Verdict thresholds (calibrated scale)
+    # Apply vocabulary penalty
+    vocab_src = known_words if known_words else lesson_phrases
+    penalty   = _vocab_penalty(user_phrase, vocab_src)
+    combined  = round(base * penalty, 4)
+
+    # Verdict thresholds
     if combined >= 0.80:
         verdict = "excellent"
     elif combined >= 0.60:
@@ -225,10 +266,11 @@ def analyze_phrase(user_phrase: str,
         verdict = "weak"
 
     return {
-        "structure": struct,
-        "semantic":  sem,
-        "combined":  combined,
-        "verdict":   verdict,
+        "structure":    struct,
+        "semantic":     sem,
+        "combined":     combined,
+        "vocab_penalty": penalty,
+        "verdict":      verdict,
     }
 
 

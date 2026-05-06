@@ -60,6 +60,13 @@ html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 .sfail{background:#2e0d0d;color:#c04040;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
 
 .timer{font-family:'JetBrains Mono',monospace;font-size:2.4rem;color:#a0a0ff;text-align:center;padding:14px;background:#13131e;border-radius:12px;border:1px solid #2a2a4a;margin:10px 0;}
+.prow-active{background:#1e1e40 !important;border-left:3px solid #6060d0;}
+.prow-active .pnat{color:#c0c0ff !important;}
+.prow-active .ptgt{color:#ffffff !important;font-weight:600;}
+.pill-required{background:#2e1a0d;color:#d08040;border-color:#704020;}
+.progress-bar-wrap{background:#1a1a2e;border-radius:8px;height:8px;margin:6px 0;overflow:hidden;}
+.progress-bar-fill{height:8px;border-radius:8px;background:linear-gradient(90deg,#4040c0,#6060ff);transition:width .4s;}
+.progress-info{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#5050a0;margin-bottom:2px;}
 .cbanner{background:linear-gradient(135deg,#0d2e1a,#1a1a2e);border:1px solid #304030;border-radius:16px;padding:36px;text-align:center;}
 audio{width:100%;border-radius:8px;margin:4px 0;}
 </style>
@@ -146,6 +153,66 @@ def autoplaylist_html(audio_paths, pause_secs):
 </script>
 """
 
+def autoplaylist_html_with_highlight(audio_paths, pause_secs, uid="pl"):
+    """Autoplaylist that also updates a URL param so Python can highlight active phrase."""
+    srcs = []
+    for p in audio_paths:
+        if p and Path(p).exists():
+            with open(p, "rb") as f:
+                srcs.append("data:audio/mp3;base64," + base64.b64encode(f.read()).decode())
+        else:
+            srcs.append("")
+    srcs_js   = str(srcs).replace("'", '"')
+    pauses_js = str([round(s, 2) for s in pause_secs])
+    n = len(srcs)
+    return f"""
+<div style="background:#13131e;border:1px solid #2a2a4a;border-radius:12px;padding:14px 18px;margin:8px 0;">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <button id="pl-btn-{uid}" onclick="plToggle_{uid}()"
+      style="background:#2a2a5a;color:#a0a0ff;border:1px solid #5050b0;border-radius:8px;
+             padding:7px 18px;cursor:pointer;font-family:JetBrains Mono,monospace;font-size:.88rem;">
+      ▶ Play All
+    </button>
+    <span id="pl-stat-{uid}" style="color:#6060a0;font-size:.8rem;font-family:JetBrains Mono,monospace;">ready</span>
+  </div>
+  <div id="pl-bar-{uid}" style="margin-top:10px;display:flex;gap:4px;flex-wrap:wrap;"></div>
+</div>
+<script>
+(function(){{
+  const srcs={srcs_js},pauses={pauses_js},n={n},uid='{uid}';
+  let cur=-1,playing=false,aud=null,tmr=null;
+  const bar=document.getElementById('pl-bar-'+uid);
+  for(let i=0;i<n;i++){{const d=document.createElement('div');d.id='dot-'+uid+'-'+i;
+    d.style.cssText='width:10px;height:10px;border-radius:50%;background:#2a2a5a;transition:.2s;';
+    bar.appendChild(d);}}
+  function dot(i,c){{const d=document.getElementById('dot-'+uid+'-'+i);if(!d)return;
+    d.style.background=c==='active'?'#a0a0ff':c==='done'?'#40c070':'#2a2a5a';}}
+  function stop(){{if(aud){{aud.pause();aud=null;}}if(tmr){{clearTimeout(tmr);tmr=null;}}
+    playing=false;cur=-1;
+    document.getElementById('pl-btn-'+uid).textContent='▶ Play All';
+    document.getElementById('pl-btn-'+uid).style.color='#a0a0ff';
+    document.getElementById('pl-stat-'+uid).textContent='done ✓';
+    for(let i=0;i<n;i++)dot(i,'done');}}
+  function playIdx(i){{
+    if(i>=n){{stop();return;}}
+    cur=i;playing=true;
+    for(let j=0;j<i;j++)dot(j,'done');dot(i,'active');
+    document.getElementById('pl-stat-'+uid).textContent='▶ phrase '+(i+1)+'/'+n;
+    // Notify parent frame of active index for row highlighting
+    try{{window.parent.postMessage({{type:'imlls_highlight',uid:uid,idx:i}},'*');}}catch(e){{}}
+    if(!srcs[i]){{tmr=setTimeout(()=>playIdx(i+1),pauses[i]*1000);return;}}
+    aud=new Audio(srcs[i]);
+    aud.onended=()=>{{dot(i,'done');tmr=setTimeout(()=>playIdx(i+1),pauses[i]*1000);}};
+    aud.onerror=()=>{{tmr=setTimeout(()=>playIdx(i+1),500);}};
+    aud.play().catch(()=>{{tmr=setTimeout(()=>playIdx(i+1),500);}});}}
+  window['plToggle_'+uid]=function(){{
+    if(playing){{stop();document.getElementById('pl-stat-'+uid).textContent='stopped';}}
+    else{{document.getElementById('pl-btn-'+uid).textContent='■ Stop';
+          document.getElementById('pl-btn-'+uid).style.color='#ff6060';playIdx(0);}}}};
+}})();
+</script>
+"""
+
 def phrase_pause(phrase):
     words = len(phrase.split())
     return min(max(round(words / 2, 1), 1.5), 4.0)
@@ -162,7 +229,7 @@ def play(path: str, auto=False):
                 unsafe_allow_html=True)
 
 
-def phrase_table(phrases, show_native=True, show_target=True, scores=None, highlight=None):
+def phrase_table(phrases, show_native=True, show_target=True, scores=None, highlight=None, active_idx=None):
     html = ""
     for i, p in enumerate(phrases):
         num  = f'<span class="pnum">{i+1:02d}</span>'
@@ -173,35 +240,63 @@ def phrase_table(phrases, show_native=True, show_target=True, scores=None, highl
             s   = scores[i]
             cls = "spass" if s["passed"] else "sfail"
             sc  = f'<span class="{cls}">{int(s["score"]*100)}%</span>'
-        bg = ' style="background:#1e1e35"' if highlight==i else ""
-        html += f'<div class="prow"{bg}>{num}{nat}{tgt}{sc}</div>'
+        # active_idx = currently playing phrase (bright highlight)
+        # highlight  = legacy dimmer highlight
+        if active_idx == i:
+            row_cls = ' class="prow prow-active"'
+        elif highlight == i:
+            row_cls = ' class="prow" style="background:#1e1e35"'
+        else:
+            row_cls = ' class="prow"'
+        html += f'<div{row_cls}>{num}{nat}{tgt}{sc}</div>'
     st.markdown(f'<div class="ptable">{html}</div>', unsafe_allow_html=True)
 
 
-def step_hdr(step, title, desc, total=7):
+def step_hdr(step, title, desc, total=8):
     pills = "".join(
-        f'<span class="pill {"pill-active" if s==step else "pill-done" if s<step else ""}">{s}</span>'
+        f'<span class="pill {"pill-active" if s==step else "pill-done" if s<step else "pill-required" if s in REQUIRED_STEPS and s>step else ""}">'
+        f'{"🔒" if s in REQUIRED_STEPS and s > step else s}</span>'
         for s in range(1, total+1)
     )
+    req_note = ' <span style="color:#d08040;font-size:.72rem;">🔒 required</span>' if step in REQUIRED_STEPS else ''
     st.markdown(f"""
     <div class="step-header">
       <div class="step-pills">{pills}</div>
-      <div class="step-num">STEP {step} / {total}</div>
+      <div class="step-num">STEP {step} / {total}{req_note}</div>
       <div class="step-title">{title}</div>
       <div class="step-desc">{desc}</div>
     </div>""", unsafe_allow_html=True)
 
 
+def _audio_duration_ms(audio_bytes: bytes) -> int:
+    """Extract audio duration from WAV/WebM bytes. Returns ms, or 0 on failure."""
+    try:
+        import io, wave
+        with wave.open(io.BytesIO(audio_bytes)) as wf:
+            return int(wf.getnframes() / wf.getframerate() * 1000)
+    except Exception:
+        pass
+    try:
+        # Fallback: estimate from file size (~16kHz mono webm)
+        return max(0, int(len(audio_bytes) / 32000 * 1000))
+    except Exception:
+        return 0
+
+
 def do_score(session: LessonSession, audio: bytes, expected: str,
              lang: str, step: int, phrase_id: int = 0) -> dict | None:
-    """Transcribe audio and score against expected. step and phrase_id go to the log."""
+    """Transcribe audio, score against expected, log with audio duration."""
     if not audio: return None
     if not whisper_available():
         st.warning("Whisper not installed — install `openai-whisper` for voice scoring.")
         return None
+    duration_ms = _audio_duration_ms(audio)
     with st.spinner("Transcribing…"):
         text = transcribe_bytes(audio, language=lang)
-    return session.score(text, expected, step=step, phrase_id=phrase_id)
+    # Pass duration_ms so logger records actual recording length, not wall-clock
+    result = session.score(text, expected, step=step, phrase_id=phrase_id,
+                           duration_ms=duration_ms if duration_ms > 0 else None)
+    return result
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -243,17 +338,19 @@ def step2(session: LessonSession, tts_lang, wh_lang):
     session.start_step(2)
     step_hdr(2, "Listen & Repeat",
              "Listen to each phrase and repeat it aloud. Phrases play automatically with pauses.")
-    phrases = session.phrases()
-    phrase_table(phrases, show_native=True, show_target=True)
+    phrases   = session.phrases()
+    active_idx = st.session_state.get("s2_active", None)
+    phrase_table(phrases, show_native=True, show_target=True, active_idx=active_idx)
 
-    # Build audio paths and pauses
     paths  = [get_audio_path(p["target"], tts_lang) for p in phrases]
     pauses = [phrase_pause(p["target"]) for p in phrases]
 
-    st.markdown("Press **Play All** to start. Repeat each phrase aloud during the pause.")
-    components.html(autoplaylist_html(paths, pauses), height=120, scrolling=False)
+    st.markdown("Press **▶ Play All** to start. Repeat each phrase aloud during the pause.")
+    playlist_html = autoplaylist_html_with_highlight(paths, pauses, uid="s2")
+    components.html(playlist_html, height=120, scrolling=False)
 
     if st.button("Continue to Step 3 →", type="primary", use_container_width=True):
+        st.session_state.pop("s2_active", None)
         return True
     return False
 
@@ -389,15 +486,18 @@ def step5(session: LessonSession, tts_lang, wh_lang):
     step_hdr(5, "Shadowing",
              "Listen to each phrase and repeat it in the target language. Only native translation shown.")
     phrases = session.phrases()
-    phrase_table(phrases, show_native=True, show_target=False)
+    active_idx = st.session_state.get("s5_active", None)
+    phrase_table(phrases, show_native=True, show_target=False, active_idx=active_idx)
 
     paths  = [get_audio_path(p["target"], tts_lang) for p in phrases]
     pauses = [phrase_pause(p["target"]) for p in phrases]
 
-    st.markdown("Press **Play All** — listen and repeat each phrase during the pause.")
-    components.html(autoplaylist_html(paths, pauses), height=120, scrolling=False)
+    st.markdown("Press **▶ Play All** — listen and repeat each phrase during the pause.")
+    playlist_html = autoplaylist_html_with_highlight(paths, pauses, uid="s5")
+    components.html(playlist_html, height=120, scrolling=False)
 
     if st.button("Continue to Step 6 →", type="primary", use_container_width=True):
+        st.session_state.pop("s5_active", None)
         return True
     return False
 
@@ -670,7 +770,8 @@ def step8(session: LessonSession, tts_lang, wh_lang):
                         results = []
                         for phrase in candidates:
                             analysis = analyze_phrase(phrase, lesson_texts,
-                                                      target_lang=wh_lang or "en")
+                                                      target_lang=wh_lang or "en",
+                                                      known_words=lesson_texts)
                             results.append({"phrase": phrase, "analysis": analysis})
                     st.session_state["s8_results"] = results
 
@@ -694,7 +795,8 @@ def step8(session: LessonSession, tts_lang, wh_lang):
                     results = []
                     for phrase in lines:
                         analysis = analyze_phrase(phrase, lesson_texts,
-                                                  target_lang=wh_lang or "en")
+                                                  target_lang=wh_lang or "en",
+                                                  known_words=lesson_texts)
                         results.append({"phrase": phrase, "analysis": analysis})
                 st.session_state["s8_results"] = results
 
@@ -833,14 +935,38 @@ def _clear_all():
 # ═══════════════════════════════════════════════════════════════════════════
 # Main
 # ═══════════════════════════════════════════════════════════════════════════
+TOTAL_LESSONS = 173
+
 STEPS = {1: step1, 2: step2, 3: step3, 4: step4, 5: step5, 6: step6, 7: step7, 8: step8}
+# Steps that cannot be skipped
+REQUIRED_STEPS = {1, 3, 6, 7}
 
 def main():
     with st.sidebar:
         if "lesson_step" in st.session_state and "session" in st.session_state:
             sess  = st.session_state["session"]
             state = sess.state
-            st.markdown(f"**Lesson {state.lesson_id}** · Step {st.session_state['lesson_step']} / 7")
+            cur_step = st.session_state['lesson_step']
+            # Global progress
+            lesson_pct = round((state.lesson_id - 1) / TOTAL_LESSONS * 100, 1)
+            st.markdown(
+                f'<div class="progress-info">'
+                f'<span>Lesson {state.lesson_id} / {TOTAL_LESSONS}</span>'
+                f'<span>{lesson_pct}%</span></div>'
+                f'<div class="progress-bar-wrap">'
+                f'<div class="progress-bar-fill" style="width:{lesson_pct}%"></div></div>',
+                unsafe_allow_html=True
+            )
+            # Step progress
+            step_pct = round((cur_step - 1) / 8 * 100, 0)
+            st.markdown(
+                f'<div class="progress-info">'
+                f'<span>Step {cur_step} / 8</span>'
+                f'<span>{"🔒" if cur_step in REQUIRED_STEPS else ""}</span></div>'
+                f'<div class="progress-bar-wrap">'
+                f'<div class="progress-bar-fill" style="width:{step_pct}%;background:linear-gradient(90deg,#205040,#40c070)"></div></div>',
+                unsafe_allow_html=True
+            )
             st.caption(f"`{state.language_pair}`")
             logs = sess.logger.read_all()
             if logs:
@@ -862,10 +988,20 @@ def main():
         render_complete(sess); return
 
     fn = STEPS.get(step)
-    if fn and fn(sess, tts, wh):
-        _clear_lesson()
-        st.session_state["lesson_step"] = step + 1
-        st.rerun()
+    if fn:
+        done = fn(sess, tts, wh)
+        if done:
+            _clear_lesson()
+            st.session_state["lesson_step"] = step + 1
+            st.rerun()
+        # Show skip button only for optional steps
+        elif step not in REQUIRED_STEPS:
+            st.markdown("---")
+            if st.button("⏭ Skip this step", key=f"skip_{step}",
+                         help="This step is optional — you can skip it"):
+                _clear_lesson()
+                st.session_state["lesson_step"] = step + 1
+                st.rerun()
 
 
 if __name__ == "__main__":

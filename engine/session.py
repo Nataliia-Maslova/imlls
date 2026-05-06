@@ -83,9 +83,15 @@ class LessonSession:
 
     def score(self, user_input: str, expected: str,
               step: int | None = None,
-              phrase_id: int | None = None) -> dict:
+              phrase_id: int | None = None,
+              duration_ms: int | None = None) -> dict:
+        """
+        Evaluate and log.
+        duration_ms: if provided (audio recording duration), use instead of
+                     wall-clock elapsed time for more accurate logging.
+        """
         actual_step   = step if step is not None else self.state.current_step
-        elapsed       = self.elapsed_ms(actual_step)
+        elapsed       = duration_ms if duration_ms is not None else self.elapsed_ms(actual_step)
         result        = evaluate(user_input, expected)
         log_phrase_id = phrase_id if phrase_id is not None else 0
 
