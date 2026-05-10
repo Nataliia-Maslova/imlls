@@ -20,8 +20,8 @@ from engine.session import LessonSession
 from engine.scorer  import evaluate
 from engine.tts     import get_audio_path
 from engine.stt      import transcribe_bytes, whisper_available
-from engine.analyzer import analyze_phrase, models_available
 from engine.logger  import SessionLogger, get_last_lesson, save_progress
+from engine.gec import correct as gec_correct, gec_available
 
 DB_PATH   = ROOT / "data" / "imlls_database.xlsx"
 LANGUAGES = ["English", "Ukrainian", "Spanish", "Korean"]
@@ -711,44 +711,45 @@ def render_setup():
 # ═══════════════════════════════════════════════════════════════════════════
 def step8(session: LessonSession, tts_lang, wh_lang):
     session.start_step(8)
-    step_hdr(8, "Create Your Own Phrases",
-             "Make up 3 new phrases using the patterns from this lesson. "
-             "The system will analyze how close they are in structure and meaning.",
+    step_hdr(8, "Grammar Check — Create Your Own Phrases",
+             "Say or type phrases in English. The system will correct grammar errors.",
              total=8)
 
     phrases      = session.phrases()
-    lesson_texts = [p["target"] for p in phrases]
+    is_english   = wh_lang in ("en", None)
 
-    # ── Model availability warning ────────────────────────────────────────
-    if not models_available():
-        st.warning(
-            "⚠️ `sentence-transformers` not installed.  \n"
-            "Run: `pip install sentence-transformers nltk`"
-        )
-        if st.button("Skip Step 8 →", use_container_width=True):
+    # Крок 8 активний тільки для англійської
+    if not is_english:
+        st.info("Grammar correction is available for English only. "
+                "This step is skipped for other languages.")
+        if st.button("Continue →", type="primary", use_container_width=True):
             return True
         return False
 
-    # ── Reference table ───────────────────────────────────────────────────
-    with st.expander("📚 Reference — lesson phrases", expanded=False):
+    if not gec_available():
+        st.warning("⚠️ GEC model not found in `gec_model/` folder.")
+        if st.button("Skip →", use_container_width=True):
+            return True
+        return False
+
+    # Reference table
+    with st.expander("📚 Lesson phrases for reference", expanded=False):
         phrase_table(phrases, show_native=True, show_target=True)
 
     st.markdown("---")
-
-    # ── How many phrases to generate ─────────────────────────────────────
     n_phrases = st.slider("How many phrases to create?", 1, 5, 3, key="s8_n")
 
-    # ── Input: voice or text ──────────────────────────────────────────────
     input_mode = st.radio("Input method", ["🎙️ Voice", "⌨️ Text"],
                           horizontal=True, key="s8_mode")
 
     results = st.session_state.get("s8_results", [])
 
+    # ── Voice input ───────────────────────────────────────────────────────
     if input_mode == "🎙️ Voice":
         st.markdown(f"Record yourself saying **{n_phrases} original phrase(s)**.")
         audio = audio_input("s8_voice")
 
-        if st.button("Submit & Analyze", type="primary",
+        if st.button("Submit & Check Grammar", type="primary",
                      use_container_width=True, key="s8_submit_voice"):
             if not audio:
                 st.warning("Please record audio first.")
@@ -756,155 +757,79 @@ def step8(session: LessonSession, tts_lang, wh_lang):
                 st.warning("Whisper not installed.")
             else:
                 with st.spinner("Transcribing…"):
-                    raw = transcribe_bytes(audio, language=wh_lang)
-
-                # Split transcription into individual phrases by punctuation
-                import re
-                candidates = [s.strip() for s in re.split(r"[.!?]", raw) if len(s.strip()) > 3]
-                candidates = candidates[:n_phrases]
+                    import re
+                    raw        = transcribe_bytes(audio, language=wh_lang)
+                    candidates = [s.strip() for s in re.split(r"[.!?]", raw)
+                                  if len(s.strip()) > 3][:n_phrases]
 
                 if not candidates:
                     st.warning(f"Could not detect phrases. Transcribed: `{raw}`")
                 else:
-                    with st.spinner("Analyzing structure and meaning…"):
-                        results = []
-                        for phrase in candidates:
-                            analysis = analyze_phrase(phrase, lesson_texts,
-                                                      target_lang=wh_lang or "en",
-                                                      known_words=lesson_texts)
-                            results.append({"phrase": phrase, "analysis": analysis})
+                    with st.spinner("Checking grammar…"):
+                        results = [{"original": p, "corrected": gec_correct(p)}
+                                   for p in candidates]
                     st.session_state["s8_results"] = results
+                    session.score(raw, raw, step=8, phrase_id=0)
 
+    # ── Text input ────────────────────────────────────────────────────────
     else:
-        st.markdown(f"Type **{n_phrases} phrase(s)**, one per line.")
         text_input = st.text_area(
-            "Your phrases:",
-            placeholder="a hot bottle\na new road\na little plan",
-            height=120,
-            key="s8_text_input",
+            "Type your phrases (one per line):",
+            placeholder="It's a big room.\nShe have a red pen.\nThey was happy.",
+            height=120, key="s8_text_input",
         )
-
-        if st.button("Submit & Analyze", type="primary",
+        if st.button("Submit & Check Grammar", type="primary",
                      use_container_width=True, key="s8_submit_text"):
-            lines = [l.strip() for l in text_input.strip().splitlines() if l.strip()]
+            lines = [l.strip() for l in text_input.strip().splitlines()
+                     if l.strip()][:n_phrases]
             if not lines:
                 st.warning("Please enter at least one phrase.")
             else:
-                lines = lines[:n_phrases]
-                with st.spinner("Analyzing structure and meaning…"):
-                    results = []
-                    for phrase in lines:
-                        analysis = analyze_phrase(phrase, lesson_texts,
-                                                  target_lang=wh_lang or "en",
-                                                  known_words=lesson_texts)
-                        results.append({"phrase": phrase, "analysis": analysis})
+                with st.spinner("Checking grammar…"):
+                    results = [{"original": p, "corrected": gec_correct(p)}
+                               for p in lines]
                 st.session_state["s8_results"] = results
+                session.score(text_input, text_input, step=8, phrase_id=0)
 
-    # ── Results display ───────────────────────────────────────────────────
+    # ── Results ───────────────────────────────────────────────────────────
     if results:
         st.markdown("---")
-        st.markdown("### 📊 Analysis Results")
+        st.markdown("### ✏️ Grammar Correction Results")
 
-        VERDICT_COLOR = {
-            "excellent": "#40c070",
-            "good":      "#80c040",
-            "fair":      "#c0a040",
-            "weak":      "#c04040",
-        }
-        VERDICT_ICON = {
-            "excellent": "🟢",
-            "good":      "🟡",
-            "fair":      "🟠",
-            "weak":      "🔴",
-        }
-
+        any_corrected = False
         for item in results:
-            phrase   = item["phrase"]
-            analysis = item["analysis"]
-            verdict  = analysis["verdict"]
-            combined = analysis["combined"]
-            color    = VERDICT_COLOR[verdict]
-            icon     = VERDICT_ICON[verdict]
+            orig  = item["original"]
+            corr  = item["corrected"]
+            changed = orig.strip().lower() != corr.strip().lower()
+            if changed: any_corrected = True
 
-            with st.container():
-                st.markdown(
-                    f'''<div style="background:#13131e;border:1px solid #2a2a4a;
-                    border-radius:12px;padding:16px 20px;margin:10px 0;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                      <span style="color:#e0e0ff;font-size:1.05rem;font-weight:500;">
-                        "{phrase}"
-                      </span>
-                      <span style="color:{color};font-family:JetBrains Mono,monospace;
-                        font-size:.9rem;">{icon} {int(combined*100)}% {verdict}</span>
-                    </div></div>''',
-                    unsafe_allow_html=True,
+            color  = "#c04060" if changed else "#40c070"
+            icon   = "✗" if changed else "✓"
+            label  = "corrected" if changed else "correct"
+
+            if changed:
+                corr_html = (
+                    "<div style='color:#e0e0ff;font-size:1rem;margin-top:6px;'>"
+                    "<span style='color:#40c070;'>GEC: </span>"
+                    + corr + "</div>"
                 )
+            else:
+                corr_html = ""
 
-                sem     = analysis["semantic"]
-                struct  = analysis["structure"]
-
-                c1, c2 = st.columns(2)
-                with c1:
-                    sem_pct = int(sem["score"] * 100)
-                    st.markdown(
-                        f'''<div style="background:#0d1a2e;border-radius:8px;padding:12px 14px;">
-                        <div style="color:#6060a0;font-size:.75rem;margin-bottom:4px;">
-                          SEMANTIC SIMILARITY</div>
-                        <div style="color:#a0c0ff;font-size:1.3rem;font-weight:600;">
-                          {sem_pct}%</div>
-                        <div style="color:#505070;font-size:.78rem;margin-top:6px;">
-                          Closest: "{sem["best_match"]}"</div>
-                        </div>''',
-                        unsafe_allow_html=True,
-                    )
-                with c2:
-                    if struct:
-                        str_pct = int(struct["score"] * 100)
-                        u_pat   = " → ".join(struct["user_pattern"][:6])
-                        m_pat   = " → ".join(struct["match_pattern"][:6])
-                        st.markdown(
-                            f'''<div style="background:#0d2010;border-radius:8px;padding:12px 14px;">
-                            <div style="color:#406040;font-size:.75rem;margin-bottom:4px;">
-                              STRUCTURE MATCH</div>
-                            <div style="color:#80d080;font-size:1.3rem;font-weight:600;">
-                              {str_pct}%</div>
-                            <div style="color:#304830;font-size:.75rem;margin-top:6px;">
-                              Your pattern: {u_pat or "—"}</div>
-                            <div style="color:#304830;font-size:.75rem;">
-                              Lesson pattern: {m_pat or "—"}</div>
-                            </div>''',
-                            unsafe_allow_html=True,
-                        )
-                    else:
-                        st.markdown(
-                            '''<div style="background:#1a1a0d;border-radius:8px;padding:12px 14px;">
-                            <div style="color:#606040;font-size:.75rem;">
-                              Structure analysis available for English only.</div>
-                            </div>''',
-                            unsafe_allow_html=True,
-                        )
-
-                # Log each analyzed phrase
-                session.score(
-                    phrase,
-                    sem["best_match"],
-                    step=8,
-                    phrase_id=0,
-                )
-
-        # ── Overall lesson summary ────────────────────────────────────────
-        if results:
-            avg = sum(r["analysis"]["combined"] for r in results) / len(results)
-            st.markdown("---")
-            st.markdown(
-                f'''<div style="background:linear-gradient(135deg,#0d2e1a,#1a1a2e);
-                border:1px solid #304030;border-radius:12px;padding:20px;text-align:center;">
-                <div style="color:#808090;font-size:.85rem;">Average score for your phrases</div>
-                <div style="color:#a0d0ff;font-size:2rem;font-weight:600;margin:8px 0;">
-                  {int(avg*100)}%</div>
-                </div>''',
-                unsafe_allow_html=True,
+            html_block = (
+                "<div style='background:#13131e;border:1px solid #2a2a4a;"
+                "border-radius:12px;padding:14px 20px;margin:8px 0;'>"
+                f"<div style='color:#808090;font-size:.75rem;margin-bottom:6px;'>{icon} {label}</div>"
+                f"<div style='color:#e0e0ff;font-size:1rem;'>"
+                f"<span style='color:#8888b8;'>You: </span>{orig}</div>"
+                + corr_html + "</div>"
             )
+            st.markdown(html_block, unsafe_allow_html=True)
+
+        if not any_corrected:
+            st.success("✓ All phrases are grammatically correct!")
+        else:
+            st.info("💡 Review the corrections above and practice the corrected versions.")
 
     # ── Navigation ────────────────────────────────────────────────────────
     st.markdown("---")
