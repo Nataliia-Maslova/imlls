@@ -1,13 +1,13 @@
 """
 engine/gec.py — Grammatical Error Correction
 Fine-tuned T5-small on JFLEG. English only.
-"""
+
 from pathlib import Path
 import torch
 
-_model     = None
+_model = T5ForConditionalGeneration.from_pretrained("natashasms/imlls-gec")
 _tokenizer = None
-MODEL_PATH = Path(__file__).parent.parent / "gec_model"
+#MODEL_PATH = Path(__file__).parent.parent / "gec_model"
 DEVICE     = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -19,6 +19,29 @@ def _load():
         _model     = T5ForConditionalGeneration.from_pretrained(str(MODEL_PATH))
         _model.to(DEVICE)
         _model.eval()
+    return _model, _tokenizer"""
+
+from transformers import T5ForConditionalGeneration, AutoTokenizer
+import torch
+
+_model = None
+_tokenizer = None
+
+MODEL_NAME = "natashasms/imlls-gec"
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def _load():
+    global _model, _tokenizer
+
+    if _model is None:
+        _tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+
+        _model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME)
+
+        _model.to(DEVICE)
+        _model.eval()
+
     return _model, _tokenizer
 
 
@@ -42,4 +65,8 @@ def correct(text: str) -> str:
 
 
 def gec_available() -> bool:
-    return (MODEL_PATH / "config.json").exists()
+    try:
+        _load()
+        return True
+    except Exception:
+        return False
