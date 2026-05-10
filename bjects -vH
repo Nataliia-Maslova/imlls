@@ -15,3 +15,169 @@ Date:   Sun May 10 17:23:04 2026 +0200
  mt5_gec_model/tokenizer.json         | 1001433 [31m-------------------------------[m
  mt5_gec_model/tokenizer_config.json  |     116 [31m-[m
  10 files changed, 68 insertions(+), 1131206 deletions(-)
+
+[33mcommit e18e816d58756d82d9446f89149e5d1ca819bffc[m
+Author: Natalia <nataliiamaslovaneo@gmail.com>
+Date:   Sun May 10 08:55:46 2026 +0200
+
+    8 update
+
+ app.py                               |     217 [32m+[m[31m-[m
+ engine/gec.py                        |      45 [32m+[m
+ gec_model/config.json                |      63 [32m+[m
+ gec_model/generation_config.json     |       7 [32m+[m
+ gec_model/tokenizer.json             |  129430 [32m++++[m
+ gec_model/tokenizer_config.json      |     113 [32m+[m
+ logs/student1.csv                    |      22 [32m+[m
+ mt5_gec_model/config.json            |      33 [32m+[m
+ mt5_gec_model/generation_config.json |       7 [32m+[m
+ mt5_gec_model/tokenizer.json         | 1001433 [32m+++++++++++++++++++++++++++++++[m
+ mt5_gec_model/tokenizer_config.json  |     116 [32m+[m
+ 11 files changed, 1131340 insertions(+), 146 deletions(-)
+
+[33mcommit 949752bd272daddf8de1c7812f57b4986dffe268[m
+Author: Natalia <nataliiamaslovaneo@gmail.com>
+Date:   Thu May 7 17:12:58 2026 +0200
+
+    database update
+
+ data/imlls_database.xlsx | Bin [31m149726[m -> [32m150335[m bytes
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+
+[33mcommit 3af862c401def2a0754520c3c3730968ed79bda0[m
+Author: Natalia <nataliiamaslovaneo@gmail.com>
+Date:   Wed May 6 12:05:10 2026 +0200
+
+    analyzer logger app update
+
+ .vscode/settings.json                      |   9 [32m++[m
+ app.py                                     | 182 [32m+++++++++++++++++++++++++[m[31m----[m
+ engine/__pycache__/loader.cpython-311.pyc  | Bin [31m3259[m -> [32m3259[m bytes
+ engine/__pycache__/logger.cpython-311.pyc  | Bin [31m11703[m -> [32m11703[m bytes
+ engine/__pycache__/scorer.cpython-311.pyc  | Bin [31m1752[m -> [32m1752[m bytes
+ engine/__pycache__/session.cpython-311.pyc | Bin [31m6860[m -> [32m7114[m bytes
+ engine/__pycache__/stt.cpython-311.pyc     | Bin [31m3053[m -> [32m3053[m bytes
+ engine/__pycache__/tts.cpython-311.pyc     | Bin [31m2130[m -> [32m2130[m bytes
+ engine/analyzer.py                         |  62 [32m++++++++[m[31m--[m
+ engine/session.py                          |  10 [32m+[m[31m-[m
+ logs/student1.csv                          |  24 [32m++++[m
+ 11 files changed, 252 insertions(+), 35 deletions(-)
+
+[33mcommit b2af66de97cc198e2b9c58019475b3375ecfce86[m
+Author: Natalia <nataliiamaslovaneo@gmail.com>
+Date:   Sat May 2 17:05:10 2026 +0200
+
+    analyzer.py updated
+
+ engine/analyzer.py | 41 [32m++++++++++++++++++++++++++++++[m[31m-----------[m
+ 1 file changed, 30 insertions(+), 11 deletions(-)
+
+[33mcommit 9e07f9a6103d8e81fdcee5f5473e705d42207f31[m
+Author: Natalia <nataliiamaslovaneo@gmail.com>
+Date:   Sat May 2 16:55:44 2026 +0200
+
+    8 step update 111
+
+ engine/analyzer.py | 202 [32m++++++++++++++++++++++++++++++[m[31m-----------------------[m
+ logs/student1.csv  |  14 [32m++++[m
+ 2 files changed, 128 insertions(+), 88 deletions(-)
+
+[33mcommit cbb7996f6fec744937250f7f2d6092bbaeda0618[m
+Author: Natalia <nataliiamaslovaneo@gmail.com>
+Date:   Sat May 2 16:43:27 2026 +0200
+
+    8 step changes
+
+ app.py                                     |   6 [32m+[m[31m-----[m
+ engine/__pycache__/session.cpython-311.pyc | Bin [31m6860[m -> [32m6860[m bytes
+ logs/student1.csv                          |  22 [32m++++++++++++++++++++++[m
+ 3 files changed, 23 insertions(+), 5 deletions(-)
+
+[33mcommit 328fdd072edd45986aaeff801e6f42abf68e8aef[m
+Author: Natalia <nataliiamaslovaneo@gmail.com>
+Date:   Sat May 2 15:51:58 2026 +0200
+
+    step 8 added 1
+
+ app.py | 2 [32m+[m[31m-[m
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+[33mcommit d85e652299a4fddc7b6b9603e0203b6b3e19b417[m
+Author: Natalia <nataliiamaslovaneo@gmail.com>
+Date:   Sat May 2 15:50:03 2026 +0200
+
+    8 step added
+
+ app.py             | 228 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++[m[31m--[m
+ engine/analyzer.py | 195 [32m+++++++++++++++++++++++++++++++++++++++++++++[m
+ engine/session.py  |   4 [32m+[m[31m-[m
+ logs/student1.csv  |  10 [32m+++[m
+ requirements.txt   |   2 [32m+[m
+ 5 files changed, 430 insertions(+), 9 deletions(-)
+
+[33mcommit 45b1bc384ecc19db31e29af4e366a899fab6ff26[m
+Author: Natalia <nataliiamaslovaneo@gmail.com>
+Date:   Thu Apr 30 19:26:53 2026 +0200
+
+    streamlit update
+
+ .gitignore                                  |   7 [32m+++++++[m
+ .streamlit/secrets_template.toml            |  13 [32m+++++++++++++[m
+ engine/__pycache__/__init__.cpython-311.pyc | Bin [31m152[m -> [32m156[m bytes
+ engine/__pycache__/loader.cpython-311.pyc   | Bin [31m3255[m -> [32m3259[m bytes
+ engine/__pycache__/logger.cpython-311.pyc   | Bin [31m7529[m -> [32m11703[m bytes
+ engine/__pycache__/scorer.cpython-311.pyc   | Bin [31m1748[m -> [32m1752[m bytes
+ engine/__pycache__/session.cpython-311.pyc  | Bin [31m6757[m -> [32m6860[m bytes
+ engine/__pycache__/stt.cpython-311.pyc      | Bin [31m3049[m -> [32m3053[m bytes
+ engine/__pycache__/tts.cpython-311.pyc      | Bin [31m2126[m -> [32m2130[m bytes
+ logs/student1.csv                           |  12 [32m++++++++++++[m
+ 10 files changed, 32 insertions(+)
+
+[33mcommit da91b8618ea3bc025e165f95c782b5dcba0065cd[m
+Author: Natalia <nataliiamaslovaneo@gmail.com>
+Date:   Thu Apr 30 13:24:04 2026 +0200
+
+    color updates
+
+ app.py            |  94 [32m++++++++++++++++++++++[m[31m------[m
+ engine/logger.py  | 178 [32m++++++++++++++++++++++++++++++++++++++[m[31m----------------[m
+ engine/session.py |  50 [32m+++++++[m[31m--------[m
+ 3 files changed, 222 insertions(+), 100 deletions(-)
+
+[33mcommit 1c16031b3dc7b91ae46f07de637dede35e997f04[m
+Author: Nataliia Maslova <164047339+Nataliia-Maslova@users.noreply.github.com>
+Date:   Wed Apr 29 11:01:25 2026 +0200
+
+    Add files via upload
+
+ README.md                                        | 138 [32m++++++[m
+ analysis.ipynb                                   | 139 [32m++++++[m
+ app.py                                           | 606 [32m+++++++++++++++++++++++[m
+ audio_cache/0fbd63d0a90d75e0e54cdeb06938f6ee.mp3 | Bin [31m0[m -> [32m13248[m bytes
+ audio_cache/3d917ae20ee2443749ef55a1fa2d9385.mp3 | Bin [31m0[m -> [32m12288[m bytes
+ audio_cache/4762257f2d3230a5c3967245efd8b84d.mp3 | Bin [31m0[m -> [32m11712[m bytes
+ audio_cache/7df4d809bde8ee1f24aef7e2367b1550.mp3 | Bin [31m0[m -> [32m13824[m bytes
+ audio_cache/814069b1a41e904b03a449f8328997ee.mp3 | Bin [31m0[m -> [32m14208[m bytes
+ audio_cache/cfb1b05bd782ee85f99fd03edafcb8b0.mp3 | Bin [31m0[m -> [32m13440[m bytes
+ audio_cache/f143b869445c93c4265204e6935bea0e.mp3 | Bin [31m0[m -> [32m12672[m bytes
+ audio_cache/fa97daaec66ab872d9b1fb07cb211b93.mp3 | Bin [31m0[m -> [32m11520[m bytes
+ data/imlls_database.xlsx                         | Bin [31m0[m -> [32m149726[m bytes
+ engine/__init__.py                               |   1 [32m+[m
+ engine/__pycache__/__init__.cpython-311.pyc      | Bin [31m0[m -> [32m152[m bytes
+ engine/__pycache__/loader.cpython-311.pyc        | Bin [31m0[m -> [32m3255[m bytes
+ engine/__pycache__/logger.cpython-311.pyc        | Bin [31m0[m -> [32m7529[m bytes
+ engine/__pycache__/scorer.cpython-311.pyc        | Bin [31m0[m -> [32m1748[m bytes
+ engine/__pycache__/session.cpython-311.pyc       | Bin [31m0[m -> [32m6757[m bytes
+ engine/__pycache__/stt.cpython-311.pyc           | Bin [31m0[m -> [32m3049[m bytes
+ engine/__pycache__/tts.cpython-311.pyc           | Bin [31m0[m -> [32m2126[m bytes
+ engine/adaptive.py                               | 131 [32m+++++[m
+ engine/loader.py                                 |  65 [32m+++[m
+ engine/logger.py                                 | 145 [32m++++++[m
+ engine/scorer.py                                 |  35 [32m++[m
+ engine/session.py                                | 120 [32m+++++[m
+ engine/stt.py                                    |  67 [32m+++[m
+ engine/tts.py                                    |  45 [32m++[m
+ logs/student1.csv                                |  13 [32m+[m
+ packages.txt                                     |   1 [32m+[m
+ requirements.txt                                 |  11 [32m+[m
+ 30 files changed, 1517 insertions(+)
