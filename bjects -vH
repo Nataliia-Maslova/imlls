@@ -1,0 +1,17 @@
+[33mcommit ac5684fd280dd2c0a7a8f5d461dd32b85d486857[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Natalia <nataliiamaslovaneo@gmail.com>
+Date:   Sun May 10 17:23:04 2026 +0200
+
+    8 step uppdate
+
+ engine/gec.py                        |      35 [32m+[m[31m-[m
+ gec_model/config.json                |      63 [31m-[m
+ gec_model/generation_config.json     |       7 [31m-[m
+ gec_model/tokenizer.json             |  129430 [31m----[m
+ gec_model/tokenizer_config.json      |     113 [31m-[m
+ logs/student1.csv                    |      37 [32m+[m
+ mt5_gec_model/config.json            |      33 [31m-[m
+ mt5_gec_model/generation_config.json |       7 [31m-[m
+ mt5_gec_model/tokenizer.json         | 1001433 [31m-------------------------------[m
+ mt5_gec_model/tokenizer_config.json  |     116 [31m-[m
+ 10 files changed, 68 insertions(+), 1131206 deletions(-)
