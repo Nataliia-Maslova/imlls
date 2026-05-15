@@ -712,22 +712,25 @@ def render_setup():
 def step8(session: LessonSession, tts_lang, wh_lang):
     session.start_step(8)
     step_hdr(8, "Grammar Check — Create Your Own Phrases",
-             "Say or type phrases in English. The system will correct grammar errors.",
+             "Say or type phrases in the target language. The system will correct grammar errors.",
              total=8)
 
-    phrases      = session.phrases()
-    is_english   = wh_lang in ("en", None)
+    phrases = session.phrases()
 
-    # Крок 8 активний тільки для англійської
-    if not is_english:
-        st.info("Grammar correction is available for English only. "
+    # Languages that have a GEC model on HuggingFace
+    SUPPORTED_GEC_LANGS = {"en", "es", "ko"}
+    gec_lang = wh_lang if wh_lang in SUPPORTED_GEC_LANGS else None
+
+    # Крок 8 активний тільки для мов, для яких ми натренували модель
+    if gec_lang is None:
+        st.info("Grammar correction is available for English, Spanish and Korean only. "
                 "This step is skipped for other languages.")
         if st.button("Continue →", type="primary", use_container_width=True):
             return True
         return False
 
-    if not gec_available():
-        st.warning("⚠️ GEC model not found in `gec_model/` folder.")
+    if not gec_available(gec_lang):
+        st.warning(f"⚠️ GEC model for `{gec_lang}` could not be loaded from HuggingFace.")
         if st.button("Skip →", use_container_width=True):
             return True
         return False
@@ -766,16 +769,22 @@ def step8(session: LessonSession, tts_lang, wh_lang):
                     st.warning(f"Could not detect phrases. Transcribed: `{raw}`")
                 else:
                     with st.spinner("Checking grammar…"):
-                        results = [{"original": p, "corrected": gec_correct(p)}
+                        results = [{"original": p, "corrected": gec_correct(p, gec_lang)}
                                    for p in candidates]
                     st.session_state["s8_results"] = results
                     session.score(raw, raw, step=8, phrase_id=0)
 
     # ── Text input ────────────────────────────────────────────────────────
     else:
+        # Language-specific placeholder examples with typical errors
+        PLACEHOLDERS = {
+            "en": "It's a big room.\nShe have a red pen.\nThey was happy.",
+            "es": "Yo tiene un perro.\nElla son alta.\nNosotros vamos a la escuela.",
+            "ko": "나는 학교에 가요.\n그는 책을 읽어요.\n우리는 친구이에요.",
+        }
         text_input = st.text_area(
             "Type your phrases (one per line):",
-            placeholder="It's a big room.\nShe have a red pen.\nThey was happy.",
+            placeholder=PLACEHOLDERS.get(gec_lang, ""),
             height=120, key="s8_text_input",
         )
         if st.button("Submit & Check Grammar", type="primary",
@@ -786,7 +795,7 @@ def step8(session: LessonSession, tts_lang, wh_lang):
                 st.warning("Please enter at least one phrase.")
             else:
                 with st.spinner("Checking grammar…"):
-                    results = [{"original": p, "corrected": gec_correct(p)}
+                    results = [{"original": p, "corrected": gec_correct(p, gec_lang)}
                                for p in lines]
                 st.session_state["s8_results"] = results
                 session.score(text_input, text_input, step=8, phrase_id=0)

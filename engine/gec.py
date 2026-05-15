@@ -1,72 +1,84 @@
 """
-engine/gec.py — Grammatical Error Correction
-Fine-tuned T5-small on JFLEG. English only.
-
-from pathlib import Path
-import torch
-
-_model = T5ForConditionalGeneration.from_pretrained("natashasms/imlls-gec")
-_tokenizer = None
-#MODEL_PATH = Path(__file__).parent.parent / "gec_model"
-DEVICE     = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def _load():
-    global _model, _tokenizer
-    if _model is None:
-        from transformers import T5ForConditionalGeneration, AutoTokenizer
-        _tokenizer = AutoTokenizer.from_pretrained(str(MODEL_PATH))
-        _model     = T5ForConditionalGeneration.from_pretrained(str(MODEL_PATH))
-        _model.to(DEVICE)
-        _model.eval()
-    return _model, _tokenizer"""
+engine/gec.py - Grammatical Error Correction
+Fine-tuned T5 models hosted on HuggingFace Hub.
+Supports English, Spanish and Korean.
+"""
 
 from transformers import T5ForConditionalGeneration, AutoTokenizer
 import torch
 
-_model = None
-_tokenizer = None
+# Repo IDs of the fine-tuned models on HuggingFace Hub
+MODELS = {
+    "en": "natashasms/en-gec-model",
+    "es": "natashasms/es-gec-model",
+    "ko": "natashasms/ko-gec-model",
+}
 
-MODEL_NAME = "natashasms/imlls-gec"
+# Per-language cache: {lang: (model, tokenizer)}
+_cache: dict = {}
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def _load():
-    global _model, _tokenizer
+def _load(lang: str = "en"):
+    """Lazy-load model + tokenizer for the requested language."""
+    if lang not in MODELS:
+        return None, None
 
-    if _model is None:
-        _tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    if lang not in _cache:
+        repo_id = MODELS[lang]
+        tokenizer = AutoTokenizer.from_pretrained(repo_id)
+        model = T5ForConditionalGeneration.from_pretrained(repo_id)
+        model.to(DEVICE)
+        model.eval()
+        _cache[lang] = (model, tokenizer)
 
-        _model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME)
-
-        _model.to(DEVICE)
-        _model.eval()
-
-    return _model, _tokenizer
+    return _cache[lang]
 
 
-def correct(text: str) -> str:
-    """Return grammatically corrected version of text."""
+def correct(text: str, lang: str = "en") -> str:
+    """Return grammatically corrected version of `text` in the given language.
+
+    Falls back to returning the original text on any error or for unsupported
+    languages.
+    """
     try:
-        model, tok = _load()
-        input_ids = tok(
+        model, tokenizer = _load(lang)
+        if model is None or tokenizer is None:
+            return text
+
+        input_ids = tokenizer(
             f"grammar: {text}",
             return_tensors="pt",
             max_length=128,
             truncation=True,
         ).input_ids.to(DEVICE)
+
         with torch.no_grad():
-            outputs = model.generate(input_ids, max_length=128,
-                                     num_beams=4, early_stopping=True)
-        return tok.decode(outputs[0], skip_special_tokens=True)
+            outputs = model.generate(
+                input_ids,
+                max_length=128,
+                num_beams=4,
+                early_stopping=True,
+            )
+        return tokenizer.decode(outputs[0], skip_special_tokens=True)
     except Exception as e:
-        print(f"[GEC] Error: {e}")
+        print(f"[GEC:{lang}] Error: {e}")
         return text
 
 
-def gec_available() -> bool:
-    try:
-        _load()
-        return True
-    except Exception:
+def gec_available(lang: str = "en") -> bool:
+    """Check whether the GEC model for the given language can be loaded."""
+    if lang not in MODELS:
         return False
+    try:
+        _load(lang)
+        return True
+    except Exception as e:
+        print(f"[GEC:{lang}] Unavailable: {e}")
+        return False
+
+
+def supported_languages() -> list:
+    """List of language codes that have a GEC model."""
+    return list(MODELS.keys())
