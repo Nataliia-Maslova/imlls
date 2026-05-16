@@ -116,6 +116,37 @@ def get_last_lesson(user_id: str, language_pair: str) -> int | None:
         return None
 
 
+def get_progress(user_id: str, language_pair: str):
+    """
+    Returns dict with last_completed_lesson and last_step for this user+pair,
+    or None if no progress found. Used to resume mid-lesson.
+
+    Convention for last_step:
+      1..N      -> user is currently on that step
+      99        -> lesson fully completed (sentinel)
+    """
+    try:
+        ws = _get_ws_progress()
+        if ws is None:
+            return None
+        records = ws.get_all_records()
+        for row in records:
+            if (str(row.get("user_id")) == user_id and
+                    str(row.get("language_pair")) == language_pair):
+                lesson_val = row.get("last_completed_lesson")
+                step_val   = row.get("last_step")
+                if lesson_val in (None, ""):
+                    return None
+                return {
+                    "last_completed_lesson": int(lesson_val),
+                    "last_step": int(step_val) if step_val not in (None, "") else 1,
+                }
+        return None
+    except Exception as e:
+        print(f"[Logger] get_progress error: {e}")
+        return None
+
+
 def save_progress(user_id: str, language_pair: str,
                   last_completed_lesson: int, last_step: int):
     """

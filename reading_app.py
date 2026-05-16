@@ -57,6 +57,72 @@ try:
 except Exception:
     SCORER_OK = False
 
+# ── logging (CSV + Google Sheets via engine.logger) ───────────────────────
+try:
+    from engine.logger import SessionLogger, get_last_lesson, get_progress, save_progress
+    LOGGER_OK = True
+except Exception:
+    LOGGER_OK = False
+
+
+def _save_step_progress(lesson_id: int, step: int, user_id: str):
+    """Persist current (lesson_id, step) so user can resume here next time.
+    Saves at most once per (lesson_id, step) per session."""
+    if not LOGGER_OK:
+        return
+    key = (lesson_id, step)
+    if st.session_state.get("_r_last_saved_progress") == key:
+        return
+    try:
+        save_progress(
+            user_id               = user_id,
+            language_pair         = READING_LANG_PAIR,
+            last_completed_lesson = int(lesson_id),
+            last_step             = int(step),
+        )
+        st.session_state["_r_last_saved_progress"] = key
+    except Exception as e:
+        print(f"[reading_app] save_progress error: {e}")
+
+READING_LANG_PAIR = "en-reading"  # used for SessionLogger / progress tracking
+
+
+def _get_logger():
+    """Return (and lazily create) the SessionLogger for this reading session."""
+    if not LOGGER_OK:
+        return None
+    if "r_logger" in st.session_state:
+        return st.session_state["r_logger"]
+    user_id = st.session_state.get("r_user", "anonymous")
+    try:
+        logger = SessionLogger(user_id, language_pair=READING_LANG_PAIR)
+        st.session_state["r_logger"] = logger
+        return logger
+    except Exception as e:
+        print(f"[reading_app] logger init failed: {e}")
+        return None
+
+
+def _log_score(step: int, phrase_id: int, similarity: float,
+               response_time_ms: int, success: bool):
+    """Log a score event for the current reading lesson."""
+    logger = _get_logger()
+    if logger is None:
+        return
+    try:
+        logger.log(
+            lesson_id=int(st.session_state.get("r_lesson", 0)),
+            phrase_id=phrase_id,
+            step=step,
+            similarity=similarity,
+            response_time_ms=response_time_ms,
+            attempts=1,
+            success=success,
+            mode="reading",
+        )
+    except Exception as e:
+        print(f"[reading_app] log error: {e}")
+
 
 def score_audio(audio_bytes, expected_text):
     """Transcribe via Whisper and score similarity vs expected_text."""
@@ -420,8 +486,13 @@ def load(path: str) -> pd.DataFrame:
     return df
 
 
-st.set_page_config(page_title="Reading Practice", page_icon="📖",
-                   layout="wide", initial_sidebar_state="collapsed")
+# st.set_page_config is set up by main_app.py when used as a launcher.
+# When this file is run directly, set it here too.
+try:
+    st.set_page_config(page_title="Reading Practice", page_icon="📖",
+                       layout="wide", initial_sidebar_state="collapsed")
+except Exception:
+    pass  # Already set by main_app.py
 
 st.markdown("""
 <style>
@@ -560,6 +631,7 @@ def do_step2(rows: pd.DataFrame) -> bool:
             elif not STT_OK or not SCORER_OK:
                 st.warning("Whisper/RapidFuzz не встановлені.")
             else:
+                t_ms = _audio_duration_ms(audio)
                 with st.spinner("Розпізнаємо мовлення..."):
                     r = score_audio(audio, expected)
                 if r:
@@ -572,6 +644,10 @@ def do_step2(rows: pd.DataFrame) -> bool:
                         f'color:{color};font-weight:600">{int(r["score"]*100)}%</div>',
                         unsafe_allow_html=True,
                     )
+                    _log_score(step=2, phrase_id=0,
+                               similarity=r["score"],
+                               response_time_ms=t_ms,
+                               success=bool(r["passed"]))
                     st.rerun()
                 else:
                     st.error("Не вдалося розпізнати аудіо.")
@@ -648,6 +724,10 @@ def do_step3(rows: pd.DataFrame) -> bool:
                     scores[idx] = ok
                     st.session_state["s3_scores"] = scores
                     st.session_state["s3_idx"]    = idx + 1
+                    _log_score(step=3, phrase_id=int(row.get("row_id", idx + 1)),
+                               similarity=1.0 if ok else 0.0,
+                               response_time_ms=0,
+                               success=ok)
                     if ok:
                         st.success(f"✓ Правильно! — {row['transcription']}")
                     else:
@@ -738,6 +818,13 @@ def do_step5(rows: pd.DataFrame) -> bool:
                     if r:
                         res["score"]  = r["score"]
                         res["passed"] = r["passed"]
+                # Log step 5 outcome
+                _log_score(
+                    step=5, phrase_id=0,
+                    similarity=res.get("score", 0.0),
+                    response_time_ms=t_ms,
+                    success=bool(res.get("passed", False)),
+                )
                 st.session_state["s5_result"] = res
                 st.rerun()
     with c2:
@@ -797,13 +884,43 @@ def render_setup(df: pd.DataFrame):
 
     lessons = sorted(df["lesson_id"].unique())
     c1, c2  = st.columns(2)
+    with c2:
+        user_id = st.text_input("👤 Ім'я", value="student1")
+
+    # Auto-select lesson based on saved progress (resume mid-lesson if possible)
+    progress    = None
+    default_idx = 0
+    resume_step = 1
+    resume_msg  = None
+    if LOGGER_OK and user_id:
+        try:
+            progress = get_progress(user_id, READING_LANG_PAIR)
+        except Exception:
+            progress = None
+
+    if progress:
+        saved_lesson = progress["last_completed_lesson"]
+        saved_step   = progress["last_step"]
+        if saved_step >= 99:
+            # Lesson done -> next lesson at step 1
+            next_lesson = saved_lesson + 1
+            if next_lesson in lessons:
+                default_idx = lessons.index(next_lesson)
+                resume_step = 1
+                resume_msg  = f"▶ Продовжуєш з уроку {next_lesson} (останній пройдений: {saved_lesson})"
+        else:
+            # Mid-lesson -> resume same lesson + step
+            if saved_lesson in lessons:
+                default_idx = lessons.index(saved_lesson)
+                resume_step = max(1, min(5, saved_step))
+                resume_msg  = f"⏯ Повернешся до уроку {saved_lesson} на крок {resume_step}"
+
     with c1:
         lesson_id = st.selectbox(
             "📚 Урок", lessons,
+            index=default_idx,
             format_func=lambda x: f"Урок {x} — {len(df[df['lesson_id']==x])} рядків",
         )
-    with c2:
-        user_id = st.text_input("👤 Ім'я", value="student1")
 
     rows = df[df["lesson_id"] == lesson_id].reset_index(drop=True)
 
@@ -825,12 +942,21 @@ def render_setup(df: pd.DataFrame):
         unsafe_allow_html=True,
     )
 
+    # If user kept the resume lesson selected, show the resume hint and start at saved step
+    start_at_step = resume_step if (progress and lesson_id == lessons[default_idx]) else 1
+    if resume_msg and lesson_id == lessons[default_idx]:
+        st.info(resume_msg)
+
     st.markdown("")
-    if st.button("▶ Почати урок", type="primary", use_container_width=True):
+    btn_label = f"▶ Продовжити з кроку {start_at_step}" if start_at_step > 1 else "▶ Почати урок"
+    if st.button(btn_label, type="primary", use_container_width=True):
         st.session_state["r_lesson"] = int(lesson_id)
         st.session_state["r_user"]   = user_id
         st.session_state["r_rows"]   = rows
-        st.session_state["r_step"]   = 1
+        st.session_state["r_step"]   = start_at_step
+        # Reset session flags for the new lesson
+        st.session_state.pop("_r_progress_saved", None)
+        st.session_state.pop("_r_last_saved_progress", None)
         st.rerun()
 
 
@@ -838,7 +964,25 @@ def render_setup(df: pd.DataFrame):
 #  Main
 # ═══════════════════════════════════════════════════════════════════════════
 
+def _inject_css():
+    st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+html,body,[class*="css"]{font-family:'Inter',sans-serif;}
+.stApp{background:#0d0d14;color:#e2e2f0;}
+#MainMenu,footer,header{visibility:hidden;}
+.wcard{background:#13131e;border:1px solid #2a2a4a;border-radius:14px;padding:28px 20px;margin:10px 0;text-align:center;}
+.wbig{font-size:3.2rem;font-weight:700;color:#f0f0ff;}
+.tbig{font-size:2rem;color:#a0a0ff;font-family:'JetBrains Mono',monospace;margin-top:8px;}
+.rule{background:#1a1a2e;border-left:3px solid #5050b0;border-radius:6px;padding:10px 14px;margin:8px 0;color:#8080b0;font-size:.85rem;}
+.spill{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:3px 10px;border-radius:20px;margin:2px;display:inline-block;}
+.row-ok{display:flex;gap:10px;padding:8px 14px;background:#13131e;border-bottom:1px solid #1e1e30;align-items:center;}
+</style>
+""", unsafe_allow_html=True)
+
+
 def main():
+    _inject_css()
     if not DB_PATH.exists():
         st.error(
             f"**Файл не знайдено:** `{DB_PATH}`\n\n"
@@ -855,6 +999,14 @@ def main():
     step = st.session_state["r_step"]
     rows = st.session_state["r_rows"]
 
+    # Auto-save progress on every step (for resume next session)
+    cur_lesson = st.session_state.get("r_lesson", 0)
+    cur_user   = st.session_state.get("r_user", "anonymous")
+    if step > 5:
+        _save_step_progress(cur_lesson, 99, cur_user)  # 99 = lesson done
+    else:
+        _save_step_progress(cur_lesson, step, cur_user)
+
     with st.sidebar:
         all_l = sorted(df["lesson_id"].unique())
         lid   = st.session_state.get("r_lesson", 1)
@@ -868,12 +1020,40 @@ def main():
             unsafe_allow_html=True,
         )
         st.markdown(f"**Крок {step}/5** — {STEPS.get(step,'')}")
+        # Show simple stats from logger
+        logger = _get_logger()
+        if logger is not None:
+            try:
+                logs = logger.read_all()
+                if logs:
+                    p = sum(1 for r in logs if str(r.get("success")) == "1")
+                    st.metric("Перевірок", len(logs))
+                    st.metric("Успішних", f"{p/len(logs)*100:.0f}%")
+            except Exception:
+                pass
         st.markdown("---")
+        if st.button("🔀 Switch practice mode"):
+            clear_all()
+            st.session_state["_show_launcher"] = True
+            st.rerun()
         if st.button("🏠 Головне меню"):
             clear_all()
             st.rerun()
 
     if step > 5:
+        # Save progress to Google Sheets (idempotent guard)
+        if LOGGER_OK and not st.session_state.get("_r_progress_saved"):
+            try:
+                save_progress(
+                    user_id              = st.session_state.get("r_user", "anonymous"),
+                    language_pair        = READING_LANG_PAIR,
+                    last_completed_lesson= int(st.session_state.get("r_lesson", 0)),
+                    last_step            = 99,
+                )
+                st.session_state["_r_progress_saved"] = True
+            except Exception as e:
+                print(f"[reading_app] save_progress failed: {e}")
+
         st.markdown("""
         <div style="background:linear-gradient(135deg,#0d2e1a,#1a1a2e);
              border:1px solid #304030;border-radius:16px;padding:40px;text-align:center">
@@ -885,6 +1065,8 @@ def main():
             if st.button("🔄 Повторити", type="primary", use_container_width=True):
                 clear_step_state()
                 st.session_state["r_step"] = 1
+                st.session_state.pop("_r_progress_saved", None)
+                st.session_state.pop("_r_last_saved_progress", None)
                 st.rerun()
         with c2:
             if st.button("📚 Новий урок", use_container_width=True):
