@@ -315,3 +315,11 @@ timestamp,user_id,lesson_id,phrase_id,step,similarity,response_time_ms,attempts,
 2026-05-16T18:00:29.109476,student1,en-reading,11,0,2,0.4933,11520,1,0,reading
 2026-05-16T18:00:50.059041,student1,en-reading,11,0,2,0.8551,13860,1,1,reading
 2026-05-16T18:41:19.364529,student1,uk-en-grammar,2,0,8,1.0,2222,1,1,lesson
+2026-05-16T19:50:27.241272,student1,uk-en-grammar,3,17,3,0.6471,0,1,0,lesson
+2026-05-16T19:50:29.472367,student1,uk-en-grammar,3,18,3,1.0,2,1,1,lesson
+2026-05-16T19:50:32.069230,student1,uk-en-grammar,3,19,3,0.7778,1,1,0,lesson
+2026-05-16T19:50:33.905252,student1,uk-en-grammar,3,20,3,1.0,3,1,1,lesson
+2026-05-16T19:50:35.903853,student1,uk-en-grammar,3,21,3,0.7778,7,1,0,lesson
+2026-05-16T19:50:38.386127,student1,uk-en-grammar,3,22,3,0.5556,4,1,0,lesson
+2026-05-16T19:50:40.753077,student1,uk-en-grammar,3,23,3,0.5556,3,1,0,lesson
+2026-05-16T19:50:42.662017,student1,uk-en-grammar,3,24,3,0.5405,3,1,0,lesson
