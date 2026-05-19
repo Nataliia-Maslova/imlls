@@ -15,7 +15,9 @@ import pandas as pd
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 
-from engine.loader  import load_phrases, get_lesson, get_available_lessons, TTS_LANG, WHISPER_LANG
+from engine.loader  import (load_phrases, get_lesson, get_available_lessons,
+                            get_lesson_topics as get_grammar_topics,
+                            TTS_LANG, WHISPER_LANG)
 from engine.vocab_loader import (
     load_vocab, get_vocab_lesson, get_available_vocab_lessons, get_lesson_topics,
 )
@@ -26,7 +28,11 @@ from engine.stt      import transcribe_bytes, whisper_available
 from engine.logger  import SessionLogger, get_last_lesson, get_progress, save_progress
 from engine.gec import correct as gec_correct, gec_available
 
-DB_PATH        = ROOT / "data" / "imlls_database.xlsx"
+# Prefer the workbook with lesson titles (topic_en / topic_uk columns) if it
+# exists; otherwise fall back to the original. Both have identical phrase data.
+DB_PATH_TITLED = ROOT / "data" / "imlls_database_with_titles.xlsx"
+DB_PATH_PLAIN  = ROOT / "data" / "imlls_database.xlsx"
+DB_PATH        = DB_PATH_TITLED if DB_PATH_TITLED.exists() else DB_PATH_PLAIN
 VOCAB_DB_PATH  = ROOT / "data" / "vocabulary.xlsx"
 LANGUAGES      = ["English", "Ukrainian", "Spanish", "Korean"]
 
@@ -61,7 +67,8 @@ def _module_config(module: str) -> dict:
         "load":        load_phrases,
         "get_lesson":  get_lesson,
         "get_lessons": get_available_lessons,
-        "topics":      None,
+        # Grammar topics come from the loaded DataFrame (optional topic_en/topic_uk)
+        "topics":      "from_df",
         "label":       "Grammar",
         "icon":        "🗣️",
         "lang_suffix": "grammar",
@@ -709,42 +716,37 @@ def step3(session: LessonSession, tts_lang, wh_lang):
 def step4(session: LessonSession, tts_lang, wh_lang):
     session.start_step(4)
     step_hdr(4, "Speed Reading",
-             "Read all phrases as fast as you can — record yourself, the timer is running.")
+             "Read all phrases as fast as you can — your reading speed will be measured from the recording.")
     phrases = session.phrases()
     phrase_table(phrases, show_native=False, show_target=True)
 
-    # ── Timer auto-starts on first render ──
-    if "s4_start" not in st.session_state:
-        st.session_state["s4_start"] = time.time()
-    elapsed = int(time.time() - st.session_state["s4_start"])
-    m, s = divmod(elapsed, 60)
-    color = "#ff6060" if elapsed > 60 else "#a0a0ff"
-    st.markdown(f'<div class="timer" style="color:{color}">{m:02d}:{s:02d}</div>',
-                unsafe_allow_html=True)
-
     # ── Record & Submit ──
+    # No live timer: speed is measured from the actual audio recording length.
     st.markdown("#### 🎙️ Record yourself reading all phrases")
     audio = audio_input("s4")
 
-    if st.button("Submit & Score", type="primary", use_container_width=True, key="s4_submit"):
-        if not audio:
-            st.warning("Please record or upload audio first.")
-        else:
-            total_time = int(time.time() - st.session_state["s4_start"])
-            full = ". ".join(p["target"] for p in phrases)
-            r = do_score(session, audio, full, wh_lang, step=4, phrase_id=0)
-            if r:
-                st.session_state["s4_result"] = {"time": total_time, "score": r["score"], "text": r["transcribed"]}
+    # Submit button appears only after the user records audio
+    if audio and st.button("Submit & Score", type="primary",
+                           use_container_width=True, key="s4_submit"):
+        duration_s = max(1, round(_audio_duration_ms(audio) / 1000))
+        full = ". ".join(p["target"] for p in phrases)
+        r = do_score(session, audio, full, wh_lang, step=4, phrase_id=0)
+        if r:
+            st.session_state["s4_result"] = {
+                "time":  duration_s,
+                "score": r["score"],
+                "text":  r["transcribed"],
+            }
 
     if "s4_result" in st.session_state:
         res = st.session_state["s4_result"]
-        st.success(f"🏁 {res['time']}s — {int(res['score']*100)}% match")
+        st.success(f"🏁 Reading speed: **{res['time']}s** · **{int(res['score']*100)}%** match")
         st.caption(f"Transcribed: {res['text']}")
 
     c1, c2 = st.columns([3,1])
     with c2:
         if st.button("Done →", use_container_width=True, key="s4_done"):
-            for k in ["s4_start","s4_result"]: st.session_state.pop(k, None)
+            st.session_state.pop("s4_result", None)
             return True
     return False
 
@@ -809,45 +811,77 @@ def step6(session: LessonSession, tts_lang, wh_lang):
 # ═══════════════════════════════════════════════════════════════════════════
 # Step 7 — Speed Translation (native only, timer, translate all)
 # ═══════════════════════════════════════════════════════════════════════════
+# Step 7 pass criteria — also used to inform the user up-front
+_S7_SECONDS_PER_TWO_WORDS = 1.5   # ≤ 1 sec per 2 target-language words
+_S7_MIN_SIMILARITY        = 0.80  # ≥ 80% similarity
+
+
 def step7(session: LessonSession, tts_lang, wh_lang):
     session.start_step(7)
     step_hdr(7, "Speed Translation",
-             "Translate all phrases as fast as possible — record yourself, the timer is running.")
+             "Translate all phrases as fast as possible — speed will be measured from the recording.")
     phrases = session.phrases()
     phrase_table(phrases, show_native=True, show_target=False)
 
-    # ── Timer auto-starts on first render ──
-    if "s7_start" not in st.session_state:
-        st.session_state["s7_start"] = time.time()
-    elapsed = int(time.time() - st.session_state["s7_start"])
-    m, s  = divmod(elapsed, 60)
-    color = "#ff6060" if elapsed > 60 else "#a0a0ff"
-    st.markdown(f'<div class="timer" style="color:{color}">{m:02d}:{s:02d}</div>',
-                unsafe_allow_html=True)
+    # ── Pass criteria for this lesson ──
+    # Speed target: 1 second per 2 target-language words across all phrases
+    total_words = sum(len(p["target"].split()) for p in phrases)
+    max_seconds = max(1, round(total_words / 2 * _S7_SECONDS_PER_TWO_WORDS))
+    st.caption(
+        f"Pass target: **≤ {max_seconds}s** "
+        f"({total_words} target words · 1 sec per 2 words) "
+        f"and **≥ {int(_S7_MIN_SIMILARITY*100)}%** accuracy."
+    )
 
     # ── Record & Submit ──
+    # No live timer: speed = actual audio recording length.
     st.markdown("#### 🎙️ Translate all phrases and record")
     audio = audio_input("s7")
 
     # Submit button appears only after the user records audio
     if audio and st.button("Submit & Score", type="primary",
                            use_container_width=True, key="s7_submit"):
-        total_time = int(time.time() - st.session_state["s7_start"])
+        duration_s = max(1, round(_audio_duration_ms(audio) / 1000))
         full = ". ".join(p["target"] for p in phrases)
         r = do_score(session, audio, full, wh_lang, step=7, phrase_id=0)
         if r:
-            st.session_state["s7_result"] = {"time": total_time, "score": r["score"]}
+            st.session_state["s7_result"] = {
+                "time":  duration_s,
+                "score": r["score"],
+            }
 
     if "s7_result" in st.session_state:
-        res = st.session_state["s7_result"]
-        st.success(f"🏁 Done in **{res['time']}s** with **{int(res['score']*100)}%** accuracy!")
-        if st.button("Continue to Step 8 →", type="primary", key="s7_continue"):
-            for k in ["s7_start","s7_result"]: st.session_state.pop(k, None)
-            return True
+        res      = st.session_state["s7_result"]
+        time_ok  = res["time"] <= max_seconds
+        score_ok = res["score"] >= _S7_MIN_SIMILARITY
+        passed   = time_ok and score_ok
 
-    if st.button("Skip →", use_container_width=True, key="s7_skip"):
-        for k in ["s7_start","s7_result"]: st.session_state.pop(k, None)
-        return True
+        if passed:
+            st.success(
+                f"🎉 Passed! Translation speed: **{res['time']}s** · "
+                f"**{int(res['score']*100)}%** accuracy."
+            )
+        else:
+            problems = []
+            if not time_ok:
+                problems.append(
+                    f"speed {res['time']}s > target {max_seconds}s"
+                )
+            if not score_ok:
+                problems.append(
+                    f"accuracy {int(res['score']*100)}% < "
+                    f"{int(_S7_MIN_SIMILARITY*100)}% required"
+                )
+            st.warning(
+                "Not quite there yet — " + " · ".join(problems) +
+                ". You can still continue to Step 8."
+            )
+
+        # Pass OR fail — user can always continue
+        if st.button("Continue to Step 8 →", type="primary",
+                     use_container_width=True, key="s7_continue"):
+            st.session_state.pop("s7_result", None)
+            return True
     return False
 
 
@@ -997,9 +1031,15 @@ def render_setup():
                 resume_step = max(1, min(8, saved_step))
                 resume_msg  = f"⏯ Resume {cfg['lesson_word']} {saved_lesson} at Step {resume_step}"
 
-    # For vocab: dropdown shows "Family — Lesson 1 (8 phrases)"
-    # For grammar: dropdown shows "Lesson N"
-    topics_map = cfg["topics"](str(db_path)) if cfg["topics"] else None
+    # Build topics map: either from the workbook (grammar) or a topic loader (vocab)
+    if cfg["topics"] == "from_df":
+        # Grammar: optional topic_en / topic_uk columns in the workbook
+        topics_map = get_grammar_topics(df, native_lang=native)
+    elif cfg["topics"]:
+        # Vocab: topic loader that takes the db path
+        topics_map = cfg["topics"](str(db_path))
+    else:
+        topics_map = None
 
     # Pre-compute phrase counts so we can show them in the dropdown label
     counts_by_lid = df.groupby("lesson_id").size().to_dict() if not df.empty else {}
@@ -1007,9 +1047,12 @@ def render_setup():
     def _fmt(lid):
         n = counts_by_lid.get(lid, 0)
         if topics_map and lid in topics_map:
-            # Vocab: just use the topic label ("Family — Lesson 1") + phrase count
+            # Grammar: "Lesson 1 — Article a/an + adj + noun (8 phrases)"
+            # Vocab:   "Family — Lesson 1 (8 phrases)"
+            if cfg["topics"] == "from_df":
+                return f"{cfg['lesson_word']} {lid} — {topics_map[lid]} ({n} phrases)"
             return f"{topics_map[lid]} ({n} phrases)"
-        # Grammar: classic "Lesson N"
+        # Fallback: classic "Lesson N"
         return f"{cfg['lesson_word']} {lid}"
 
     selector_label = f"📚 {cfg['label']} lesson"
