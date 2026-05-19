@@ -384,8 +384,24 @@ def autoplaylist_html(audio_paths, pause_secs=1.0, uid="pl"):
     const d=document.getElementById('dot-'+uid+'-'+i); if(!d) return;
     d.style.background = c==='active' ? '#a0a0ff' : c==='done' ? '#40c070' : '#2a2a5a';
   }}
+  function ensureAud(){{
+    // Create ONE Audio element only inside a user-gesture handler.
+    // iOS Safari blocks new Audio()/play() called from setTimeout because
+    // they lose the gesture. Reusing one element keeps the unlock alive.
+    if(aud) return;
+    aud=new Audio();
+    aud.preload='auto';
+    aud.addEventListener('ended', function(){{
+      var i=cur;
+      dot(i,'done');
+      tmr=setTimeout(function(){{ playIdx(i+1); }}, pauseMs);
+    }});
+    aud.addEventListener('error', function(){{
+      tmr=setTimeout(function(){{ playIdx(cur+1); }}, 300);
+    }});
+  }}
   function stop(){{
-    if(aud){{aud.pause(); aud=null;}}
+    if(aud){{ try{{aud.pause();}}catch(e){{}} }}
     if(tmr){{clearTimeout(tmr); tmr=null;}}
     playing=false; cur=-1;
     document.getElementById('pl-btn-'+uid).textContent='▶ Play All';
@@ -401,15 +417,17 @@ def autoplaylist_html(audio_paths, pause_secs=1.0, uid="pl"):
     cur=i; playing=true;
     for(let j=0;j<i;j++) dot(j,'done'); dot(i,'active');
     document.getElementById('pl-stat-'+uid).textContent='▶ '+(i+1)+' / '+n;
-    if(!srcs[i]){{ tmr=setTimeout(()=>playIdx(i+1), pauseMs); return; }}
-    aud=new Audio(srcs[i]);
-    aud.onended=()=>{{ dot(i,'done'); tmr=setTimeout(()=>playIdx(i+1), pauseMs); }};
-    aud.onerror=()=>{{ tmr=setTimeout(()=>playIdx(i+1), 300); }};
-    aud.play().catch(()=>{{ tmr=setTimeout(()=>playIdx(i+1), 300); }});
+    if(!srcs[i]){{ tmr=setTimeout(function(){{ playIdx(i+1); }}, pauseMs); return; }}
+    aud.src=srcs[i];
+    var p=aud.play();
+    if(p && typeof p.catch === 'function'){{
+      p.catch(function(){{ tmr=setTimeout(function(){{ playIdx(i+1); }}, 300); }});
+    }}
   }}
   window['plToggle_'+uid]=function(){{
     if(playing){{ stop(); document.getElementById('pl-stat-'+uid).textContent='stopped'; }}
     else{{
+      ensureAud();  // must run during this user-gesture click
       document.getElementById('pl-btn-'+uid).textContent='■ Stop';
       document.getElementById('pl-btn-'+uid).style.color='#ff6060';
       playIdx(0);
@@ -500,11 +518,31 @@ st.markdown("""
 html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 .stApp{background:#0d0d14;color:#e2e2f0;}
 #MainMenu,footer{visibility:hidden;}
+/* Keep Streamlit's sidebar collapse/expand control reachable on every device,
+   including iOS Safari, where the control would otherwise be invisible. */
 header{background:transparent !important;}
-header [data-testid="stToolbar"]{display:none;}
 header [data-testid="stDecoration"]{display:none;}
-[data-testid="collapsedControl"]{visibility:visible !important;
-    opacity:1 !important; display:flex !important; z-index:9999 !important;}
+/* Floating sidebar toggle (visible whenever the sidebar is collapsed) */
+[data-testid="collapsedControl"]{
+    visibility:visible !important;
+    opacity:1 !important;
+    display:flex !important;
+    z-index:9999 !important;
+    position:fixed !important;
+    top:0.6rem !important;
+    left:0.6rem !important;
+    background:#1a1a2e !important;
+    border:1px solid #5050b0 !important;
+    border-radius:8px !important;
+    box-shadow:0 2px 8px rgba(0,0,0,.4) !important;
+}
+[data-testid="collapsedControl"] button,
+[data-testid="collapsedControl"] svg{
+    color:#a0a0ff !important;
+    fill:#a0a0ff !important;
+    min-width:36px !important;
+    min-height:36px !important;
+}
 .wcard{background:#13131e;border:1px solid #2a2a4a;border-radius:14px;padding:28px 20px;margin:10px 0;text-align:center;}
 .wbig{font-size:3.2rem;font-weight:700;color:#f0f0ff;}
 .tbig{font-size:2rem;color:#a0a0ff;font-family:'JetBrains Mono',monospace;margin-top:8px;}
@@ -989,11 +1027,31 @@ def _inject_css():
 html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 .stApp{background:#0d0d14;color:#e2e2f0;}
 #MainMenu,footer{visibility:hidden;}
+/* Keep Streamlit's sidebar collapse/expand control reachable on every device,
+   including iOS Safari, where the control would otherwise be invisible. */
 header{background:transparent !important;}
-header [data-testid="stToolbar"]{display:none;}
 header [data-testid="stDecoration"]{display:none;}
-[data-testid="collapsedControl"]{visibility:visible !important;
-    opacity:1 !important; display:flex !important; z-index:9999 !important;}
+/* Floating sidebar toggle (visible whenever the sidebar is collapsed) */
+[data-testid="collapsedControl"]{
+    visibility:visible !important;
+    opacity:1 !important;
+    display:flex !important;
+    z-index:9999 !important;
+    position:fixed !important;
+    top:0.6rem !important;
+    left:0.6rem !important;
+    background:#1a1a2e !important;
+    border:1px solid #5050b0 !important;
+    border-radius:8px !important;
+    box-shadow:0 2px 8px rgba(0,0,0,.4) !important;
+}
+[data-testid="collapsedControl"] button,
+[data-testid="collapsedControl"] svg{
+    color:#a0a0ff !important;
+    fill:#a0a0ff !important;
+    min-width:36px !important;
+    min-height:36px !important;
+}
 .wcard{background:#13131e;border:1px solid #2a2a4a;border-radius:14px;padding:28px 20px;margin:10px 0;text-align:center;}
 .wbig{font-size:3.2rem;font-weight:700;color:#f0f0ff;}
 .tbig{font-size:2rem;color:#a0a0ff;font-family:'JetBrains Mono',monospace;margin-top:8px;}
@@ -1086,18 +1144,6 @@ def main():
             unsafe_allow_html=True,
         )
 
-        # Show simple stats from logger
-        logger = _get_logger()
-        if logger is not None:
-            try:
-                logs = logger.read_all()
-                if logs:
-                    p = sum(1 for r in logs if str(r.get("success")) == "1")
-                    st.metric("Перевірок", len(logs))
-                    st.metric("Успішних", f"{p/len(logs)*100:.0f}%")
-            except Exception:
-                pass
-
         # ── Step navigation: Previous / Repeat / Jump ──
         st.markdown("---")
         st.caption("Навігація між кроками")
@@ -1135,10 +1181,6 @@ def main():
                 st.rerun()
 
         st.markdown("---")
-        if st.button("🔀 Switch practice mode"):
-            clear_all()
-            st.session_state["_show_launcher"] = True
-            st.rerun()
         if st.button("🏠 Головне меню"):
             clear_all()
             st.rerun()

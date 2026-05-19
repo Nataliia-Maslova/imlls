@@ -183,12 +183,31 @@ def render_launcher():
     <style>
     .stApp{background:#0d0d14;color:#e2e2f0;}
     #MainMenu,footer{visibility:hidden;}
-    /* Keep Streamlit's sidebar collapse/expand control reachable */
+    /* Keep Streamlit's sidebar collapse/expand control reachable on every device,
+       including iOS Safari, where the control would otherwise be invisible. */
     header{background:transparent !important;}
-    header [data-testid="stToolbar"]{display:none;}
     header [data-testid="stDecoration"]{display:none;}
-    [data-testid="collapsedControl"]{visibility:visible !important;
-        opacity:1 !important; display:flex !important; z-index:9999 !important;}
+    /* Floating sidebar toggle (visible whenever the sidebar is collapsed) */
+    [data-testid="collapsedControl"]{
+        visibility:visible !important;
+        opacity:1 !important;
+        display:flex !important;
+        z-index:9999 !important;
+        position:fixed !important;
+        top:0.6rem !important;
+        left:0.6rem !important;
+        background:#1a1a2e !important;
+        border:1px solid #5050b0 !important;
+        border-radius:8px !important;
+        box-shadow:0 2px 8px rgba(0,0,0,.4) !important;
+    }
+    [data-testid="collapsedControl"] button,
+    [data-testid="collapsedControl"] svg{
+        color:#a0a0ff !important;
+        fill:#a0a0ff !important;
+        min-width:36px !important;
+        min-height:36px !important;
+    }
     .mode-card{
         background:linear-gradient(135deg,#1a1a2e,#16213e);
         border:1px solid #2a2a4a;

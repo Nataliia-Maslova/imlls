@@ -81,12 +81,31 @@ st.markdown("""
 html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 .stApp{background:#0d0d14;color:#e2e2f0;}
 #MainMenu,footer{visibility:hidden;}
-/* Keep Streamlit's sidebar collapse/expand control reachable */
+/* Keep Streamlit's sidebar collapse/expand control reachable on every device,
+   including iOS Safari, where the control would otherwise be invisible. */
 header{background:transparent !important;}
-header [data-testid="stToolbar"]{display:none;}
 header [data-testid="stDecoration"]{display:none;}
-[data-testid="collapsedControl"]{visibility:visible !important;
-    opacity:1 !important; display:flex !important; z-index:9999 !important;}
+/* Floating sidebar toggle (visible whenever the sidebar is collapsed) */
+[data-testid="collapsedControl"]{
+    visibility:visible !important;
+    opacity:1 !important;
+    display:flex !important;
+    z-index:9999 !important;
+    position:fixed !important;
+    top:0.6rem !important;
+    left:0.6rem !important;
+    background:#1a1a2e !important;
+    border:1px solid #5050b0 !important;
+    border-radius:8px !important;
+    box-shadow:0 2px 8px rgba(0,0,0,.4) !important;
+}
+[data-testid="collapsedControl"] button,
+[data-testid="collapsedControl"] svg{
+    color:#a0a0ff !important;
+    fill:#a0a0ff !important;
+    min-width:36px !important;
+    min-height:36px !important;
+}
 
 .step-header{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #2a2a4a;border-radius:14px;padding:18px 26px;margin-bottom:18px;}
 .step-num{font-family:'JetBrains Mono',monospace;color:#6060c0;font-size:.78rem;margin-bottom:4px;}
@@ -397,8 +416,25 @@ def autoplaylist_with_table(phrases, audio_paths, pause_secs, uid="pl",
     for (let i=0; i<n; i++) setRow(i, 'clear');
   }}
 
+  function ensureAud() {{
+    // Create ONE Audio element only inside a user-gesture handler.
+    // iOS Safari grants playback permission to elements unlocked by a tap;
+    // we reuse this element for every track so the permission persists.
+    if (aud) return;
+    aud = new Audio();
+    aud.preload = 'auto';
+    aud.addEventListener('ended', function() {{
+      var i = cur;
+      dot(i, 'done'); setRow(i, 'done');
+      tmr = setTimeout(function() {{ playIdx(i + 1); }}, pauses[i] * 1000);
+    }});
+    aud.addEventListener('error', function() {{
+      tmr = setTimeout(function() {{ playIdx(cur + 1); }}, 500);
+    }});
+  }}
+
   function stop() {{
-    if (aud) {{ aud.pause(); aud = null; }}
+    if (aud) {{ try {{ aud.pause(); }} catch(e) {{}} }}
     if (tmr) {{ clearTimeout(tmr); tmr = null; }}
     playing = false; cur = -1;
     document.getElementById('pl-btn-'+uid).textContent = '▶ Play All';
@@ -419,16 +455,16 @@ def autoplaylist_with_table(phrases, audio_paths, pause_secs, uid="pl",
     document.getElementById('pl-stat-'+uid).textContent = '▶ phrase ' + (i+1) + ' / ' + n;
 
     if (!srcs[i]) {{
-      tmr = setTimeout(() => playIdx(i+1), pauses[i] * 1000);
+      tmr = setTimeout(function() {{ playIdx(i+1); }}, pauses[i] * 1000);
       return;
     }}
-    aud = new Audio(srcs[i]);
-    aud.onended = () => {{
-      dot(i, 'done'); setRow(i, 'done');
-      tmr = setTimeout(() => playIdx(i+1), pauses[i] * 1000);
-    }};
-    aud.onerror = () => {{ tmr = setTimeout(() => playIdx(i+1), 500); }};
-    aud.play().catch(() => {{ tmr = setTimeout(() => playIdx(i+1), 500); }});
+    aud.src = srcs[i];
+    var p = aud.play();
+    if (p && typeof p.catch === 'function') {{
+      p.catch(function() {{
+        tmr = setTimeout(function() {{ playIdx(i+1); }}, 500);
+      }});
+    }}
   }}
 
   window['plToggle_'+uid] = function() {{
@@ -436,6 +472,7 @@ def autoplaylist_with_table(phrases, audio_paths, pause_secs, uid="pl",
       stop();
       document.getElementById('pl-stat-'+uid).textContent = 'stopped';
     }} else {{
+      ensureAud();  // must run inside this user-gesture click handler
       clearAllRows();
       for (let i=0; i<n; i++) dot(i, '');
       document.getElementById('pl-btn-'+uid).textContent = '■ Stop';
@@ -1199,12 +1236,31 @@ def _inject_css():
 html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 .stApp{background:#0d0d14;color:#e2e2f0;}
 #MainMenu,footer{visibility:hidden;}
-/* Keep Streamlit's sidebar collapse/expand control reachable */
+/* Keep Streamlit's sidebar collapse/expand control reachable on every device,
+   including iOS Safari, where the control would otherwise be invisible. */
 header{background:transparent !important;}
-header [data-testid="stToolbar"]{display:none;}
 header [data-testid="stDecoration"]{display:none;}
-[data-testid="collapsedControl"]{visibility:visible !important;
-    opacity:1 !important; display:flex !important; z-index:9999 !important;}
+/* Floating sidebar toggle (visible whenever the sidebar is collapsed) */
+[data-testid="collapsedControl"]{
+    visibility:visible !important;
+    opacity:1 !important;
+    display:flex !important;
+    z-index:9999 !important;
+    position:fixed !important;
+    top:0.6rem !important;
+    left:0.6rem !important;
+    background:#1a1a2e !important;
+    border:1px solid #5050b0 !important;
+    border-radius:8px !important;
+    box-shadow:0 2px 8px rgba(0,0,0,.4) !important;
+}
+[data-testid="collapsedControl"] button,
+[data-testid="collapsedControl"] svg{
+    color:#a0a0ff !important;
+    fill:#a0a0ff !important;
+    min-width:36px !important;
+    min-height:36px !important;
+}
 
 .step-header{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #2a2a4a;border-radius:14px;padding:18px 26px;margin-bottom:18px;}
 .step-num{font-family:'JetBrains Mono',monospace;color:#6060c0;font-size:.78rem;margin-bottom:4px;}
@@ -1312,11 +1368,6 @@ def main(module: str = "grammar"):
                 unsafe_allow_html=True
             )
             st.caption(f"`{state.language_pair}`")
-            logs = sess.logger.read_all()
-            if logs:
-                p = sum(1 for r in logs if str(r.get("success"))=="1")
-                st.metric("Checks", len(logs))
-                st.metric("Pass rate", f"{p/len(logs)*100:.0f}%")
 
             # Step navigation — back / repeat
             st.markdown("---")
@@ -1357,10 +1408,6 @@ def main(module: str = "grammar"):
                     st.rerun()
 
             st.markdown("---")
-        if st.button("🔀 Switch practice mode"):
-            _clear_all()
-            st.session_state["_show_launcher"] = True
-            st.rerun()
         if st.button("🏠 Main menu"):
             _clear_all()
             st.rerun()
