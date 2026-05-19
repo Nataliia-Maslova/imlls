@@ -499,13 +499,30 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 .stApp{background:#0d0d14;color:#e2e2f0;}
-#MainMenu,footer,header{visibility:hidden;}
+#MainMenu,footer{visibility:hidden;}
+header{background:transparent !important;}
+header [data-testid="stToolbar"]{display:none;}
+header [data-testid="stDecoration"]{display:none;}
+[data-testid="collapsedControl"]{visibility:visible !important;
+    opacity:1 !important; display:flex !important; z-index:9999 !important;}
 .wcard{background:#13131e;border:1px solid #2a2a4a;border-radius:14px;padding:28px 20px;margin:10px 0;text-align:center;}
 .wbig{font-size:3.2rem;font-weight:700;color:#f0f0ff;}
 .tbig{font-size:2rem;color:#a0a0ff;font-family:'JetBrains Mono',monospace;margin-top:8px;}
-.rule{background:#1a1a2e;border-left:3px solid #5050b0;border-radius:6px;padding:10px 14px;margin:8px 0;color:#8080b0;font-size:.85rem;}
+.rule{background:#1a1a2e;border-left:3px solid #5050b0;border-radius:6px;padding:10px 14px;margin:8px 0;color:#a0a0d0;font-size:.9rem;}
 .spill{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:3px 10px;border-radius:20px;margin:2px;display:inline-block;}
 .row-ok{display:flex;gap:10px;padding:8px 14px;background:#13131e;border-bottom:1px solid #1e1e30;align-items:center;}
+/* Make Streamlit secondary buttons (e.g. step 3 choices) dark-themed for readability */
+.stApp .stButton > button[kind="secondary"]{
+    background:#1a1a2e !important;
+    color:#f0f0ff !important;
+    border:1px solid #2a2a4a !important;
+    font-weight:500 !important;
+}
+.stApp .stButton > button[kind="secondary"]:hover{
+    background:#262648 !important;
+    border-color:#5050b0 !important;
+    color:#ffffff !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -885,7 +902,8 @@ def render_setup(df: pd.DataFrame):
     lessons = sorted(df["lesson_id"].unique())
     c1, c2  = st.columns(2)
     with c2:
-        user_id = st.text_input("👤 Ім'я", value="student1")
+        default_user = st.session_state.get("launcher_user", "student1")
+        user_id = st.text_input("👤 Ім'я", value=default_user)
 
     # Auto-select lesson based on saved progress (resume mid-lesson if possible)
     progress    = None
@@ -970,13 +988,30 @@ def _inject_css():
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 .stApp{background:#0d0d14;color:#e2e2f0;}
-#MainMenu,footer,header{visibility:hidden;}
+#MainMenu,footer{visibility:hidden;}
+header{background:transparent !important;}
+header [data-testid="stToolbar"]{display:none;}
+header [data-testid="stDecoration"]{display:none;}
+[data-testid="collapsedControl"]{visibility:visible !important;
+    opacity:1 !important; display:flex !important; z-index:9999 !important;}
 .wcard{background:#13131e;border:1px solid #2a2a4a;border-radius:14px;padding:28px 20px;margin:10px 0;text-align:center;}
 .wbig{font-size:3.2rem;font-weight:700;color:#f0f0ff;}
 .tbig{font-size:2rem;color:#a0a0ff;font-family:'JetBrains Mono',monospace;margin-top:8px;}
-.rule{background:#1a1a2e;border-left:3px solid #5050b0;border-radius:6px;padding:10px 14px;margin:8px 0;color:#8080b0;font-size:.85rem;}
+.rule{background:#1a1a2e;border-left:3px solid #5050b0;border-radius:6px;padding:10px 14px;margin:8px 0;color:#a0a0d0;font-size:.9rem;}
 .spill{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:3px 10px;border-radius:20px;margin:2px;display:inline-block;}
 .row-ok{display:flex;gap:10px;padding:8px 14px;background:#13131e;border-bottom:1px solid #1e1e30;align-items:center;}
+/* Make Streamlit secondary buttons (e.g. step 3 choices) dark-themed for readability */
+.stApp .stButton > button[kind="secondary"]{
+    background:#1a1a2e !important;
+    color:#f0f0ff !important;
+    border:1px solid #2a2a4a !important;
+    font-weight:500 !important;
+}
+.stApp .stButton > button[kind="secondary"]:hover{
+    background:#262648 !important;
+    border-color:#5050b0 !important;
+    color:#ffffff !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1008,18 +1043,49 @@ def main():
         _save_step_progress(cur_lesson, step, cur_user)
 
     with st.sidebar:
-        all_l = sorted(df["lesson_id"].unique())
-        lid   = st.session_state.get("r_lesson", 1)
-        pct   = round((lid - 1) / max(len(all_l), 1) * 100, 1)
+        st.markdown("**🔤 Reading**")
+        all_l    = sorted(df["lesson_id"].unique())
+        lid      = st.session_state.get("r_lesson", 1)
+        total    = max(len(all_l), 1)
+        # Lessons fully completed = lid - 1 (current one is in progress)
+        completed = max(lid - 1, 0)
+        pct       = round(completed / total * 100, 1)
+
         st.markdown(
-            f'<div style="font-size:.75rem;color:#5050a0;font-family:JetBrains Mono,monospace">'
-            f'Урок {lid} / {len(all_l)} · {pct}%</div>'
+            f'<div style="background:#13131e;border:1px solid #2a2a4a;'
+            f'border-radius:10px;padding:10px 12px;margin:4px 0 10px">'
+            f'<div style="color:#8080a0;font-size:.7rem;'
+            f'font-family:\'JetBrains Mono\',monospace;'
+            f'text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">'
+            f'Твій шлях · Reading</div>'
+            f'<div style="color:#f0f0ff;font-size:1.05rem;font-weight:600">'
+            f'Урок {lid} / {total}</div>'
+            f'<div style="display:flex;justify-content:space-between;'
+            f'font-family:\'JetBrains Mono\',monospace;font-size:.72rem;'
+            f'color:#5050a0;margin:6px 0 2px">'
+            f'<span>{completed} пройдено · {total - completed} попереду</span>'
+            f'<span>{pct}%</span></div>'
             f'<div style="background:#1a1a2e;border-radius:6px;height:6px;overflow:hidden">'
             f'<div style="height:6px;background:linear-gradient(90deg,#4040c0,#6060ff);'
-            f'width:{pct}%"></div></div>',
+            f'width:{pct}%"></div></div>'
+            f'</div>',
             unsafe_allow_html=True,
         )
-        st.markdown(f"**Крок {step}/5** — {STEPS.get(step,'')}")
+
+        # Step indicator
+        step_pct = round((step - 1) / 5 * 100, 0)
+        st.markdown(
+            f'<div style="display:flex;justify-content:space-between;'
+            f'font-family:\'JetBrains Mono\',monospace;font-size:.72rem;'
+            f'color:#5050a0;margin-bottom:2px">'
+            f'<span>Крок {step} / 5 — {STEPS.get(step,"")}</span>'
+            f'<span>{"🔒" if step in REQUIRED else ""}</span></div>'
+            f'<div style="background:#1a1a2e;border-radius:6px;height:6px;overflow:hidden">'
+            f'<div style="height:6px;background:linear-gradient(90deg,#205040,#40c070);'
+            f'width:{step_pct}%"></div></div>',
+            unsafe_allow_html=True,
+        )
+
         # Show simple stats from logger
         logger = _get_logger()
         if logger is not None:
@@ -1031,6 +1097,43 @@ def main():
                     st.metric("Успішних", f"{p/len(logs)*100:.0f}%")
             except Exception:
                 pass
+
+        # ── Step navigation: Previous / Repeat / Jump ──
+        st.markdown("---")
+        st.caption("Навігація між кроками")
+        nav_c1, nav_c2 = st.columns(2)
+        with nav_c1:
+            back_disabled = step <= 1
+            if st.button("← Попередній", disabled=back_disabled,
+                         use_container_width=True, key="r_nav_back",
+                         help="Повернутися до попереднього кроку"):
+                clear_step_state()
+                st.session_state["r_step"] = max(1, step - 1)
+                st.rerun()
+        with nav_c2:
+            if st.button("🔄 Повторити", use_container_width=True,
+                         key="r_nav_repeat",
+                         help="Перезапустити поточний крок"):
+                clear_step_state()
+                # step number stays the same, but per-step state is wiped
+                st.rerun()
+
+        # Quick-jump dropdown
+        jump_default = min(max(step, 1), 5) - 1
+        jump_to = st.selectbox(
+            "Перейти до кроку",
+            options=list(range(1, 6)),
+            index=jump_default,
+            format_func=lambda s: f"Крок {s}" + (" 🔒" if s in REQUIRED else ""),
+            key="r_nav_jump",
+        )
+        if jump_to != step:
+            if st.button(f"Перейти до кроку {jump_to}",
+                         use_container_width=True, key="r_nav_go"):
+                clear_step_state()
+                st.session_state["r_step"] = jump_to
+                st.rerun()
+
         st.markdown("---")
         if st.button("🔀 Switch practice mode"):
             clear_all()

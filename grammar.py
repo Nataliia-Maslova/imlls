@@ -80,7 +80,13 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 .stApp{background:#0d0d14;color:#e2e2f0;}
-#MainMenu,footer,header{visibility:hidden;}
+#MainMenu,footer{visibility:hidden;}
+/* Keep Streamlit's sidebar collapse/expand control reachable */
+header{background:transparent !important;}
+header [data-testid="stToolbar"]{display:none;}
+header [data-testid="stDecoration"]{display:none;}
+[data-testid="collapsedControl"]{visibility:visible !important;
+    opacity:1 !important; display:flex !important; z-index:9999 !important;}
 
 .step-header{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #2a2a4a;border-radius:14px;padding:18px 26px;margin-bottom:18px;}
 .step-num{font-family:'JetBrains Mono',monospace;color:#6060c0;font-size:.78rem;margin-bottom:4px;}
@@ -95,12 +101,25 @@ html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 .prow{display:flex;align-items:center;padding:11px 18px;border-bottom:1px solid #1e1e30;gap:14px;}
 .prow:last-child{border-bottom:none;}
 .prow:hover{background:#1a1a2a;}
-.pnum{font-family:'JetBrains Mono',monospace;color:#4040a0;font-size:.73rem;min-width:26px;}
-.pnat{color:#5a5a80;flex:1;font-size:.93rem;}
-.ptgt{color:#9090b8;flex:1;font-size:.93rem;font-weight:500;}
-.phide{color:#2a2a4a;flex:1;font-style:italic;font-size:.82rem;}
+.pnum{font-family:'JetBrains Mono',monospace;color:#6060d0;font-size:.78rem;min-width:26px;}
+.pnat{color:#c8c8e8;flex:1;font-size:.98rem;}
+.ptgt{color:#ffffff;flex:1;font-size:.98rem;font-weight:500;}
+.phide{color:#404060;flex:1;font-style:italic;font-size:.85rem;}
 .spass{background:#0d2e1a;color:#40c070;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
 .sfail{background:#2e0d0d;color:#c04040;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
+
+/* Step 3 — make choice buttons readable (dark theme instead of light) */
+.stApp .stButton > button[kind="secondary"]{
+    background:#1a1a2e !important;
+    color:#f0f0ff !important;
+    border:1px solid #2a2a4a !important;
+    font-weight:500 !important;
+}
+.stApp .stButton > button[kind="secondary"]:hover{
+    background:#262648 !important;
+    border-color:#5050b0 !important;
+    color:#ffffff !important;
+}
 
 .timer{font-family:'JetBrains Mono',monospace;font-size:2.4rem;color:#a0a0ff;text-align:center;padding:14px;background:#13131e;border-radius:12px;border:1px solid #2a2a4a;margin:10px 0;}
 .prow-active{background:#1e1e40 !important;border-left:3px solid #6060d0;}
@@ -531,16 +550,18 @@ def step1(session: LessonSession, tts_lang, wh_lang):
 
     c1, c2 = st.columns([3,1])
     with c1:
-        if st.button("Submit & Check", type="primary", use_container_width=True, key="s1_submit"):
-            if not audio:
-                st.warning("Please record or upload audio first.")
-            else:
-                full = ". ".join(p["target"] for p in phrases)
-                r    = do_score(session, audio, full, wh_lang, step=1, phrase_id=0)
-                if r:
-                    scores = {i: r for i in range(len(phrases))}
-                    st.session_state["s1_scores"] = scores
-                    st.markdown(f"{'✓' if r['passed'] else '✗'} **{int(r['score']*100)}%** — `{r['transcribed']}`")
+        # Submit button appears only after the user records audio
+        if audio and st.button("Submit & Check", type="primary",
+                               use_container_width=True, key="s1_submit"):
+            full = ". ".join(p["target"] for p in phrases)
+            r    = do_score(session, audio, full, wh_lang, step=1, phrase_id=0)
+            if r:
+                scores = {i: r for i in range(len(phrases))}
+                st.session_state["s1_scores"] = scores
+                st.markdown(
+                    f"{'✓' if r['passed'] else '✗'} **{int(r['score']*100)}%** — "
+                    f"`{r['transcribed']}`"
+                )
     with c2:
         if st.button("Next →", use_container_width=True, key="s1_next"):
             return True
@@ -771,15 +792,14 @@ def step7(session: LessonSession, tts_lang, wh_lang):
     st.markdown("#### 🎙️ Translate all phrases and record")
     audio = audio_input("s7")
 
-    if st.button("Submit & Score", type="primary", use_container_width=True, key="s7_submit"):
-        if not audio:
-            st.warning("Please record or upload audio first.")
-        else:
-            total_time = int(time.time() - st.session_state["s7_start"])
-            full = ". ".join(p["target"] for p in phrases)
-            r = do_score(session, audio, full, wh_lang, step=7, phrase_id=0)
-            if r:
-                st.session_state["s7_result"] = {"time": total_time, "score": r["score"]}
+    # Submit button appears only after the user records audio
+    if audio and st.button("Submit & Score", type="primary",
+                           use_container_width=True, key="s7_submit"):
+        total_time = int(time.time() - st.session_state["s7_start"])
+        full = ". ".join(p["target"] for p in phrases)
+        r = do_score(session, audio, full, wh_lang, step=7, phrase_id=0)
+        if r:
+            st.session_state["s7_result"] = {"time": total_time, "score": r["score"]}
 
     if "s7_result" in st.session_state:
         res = st.session_state["s7_result"]
@@ -877,9 +897,24 @@ def render_setup():
         st.error(f"Database not found: `{db_path}`\n\nPlace the file in the `data/` folder.")
         st.stop()
 
+    # Pre-fill from the launcher if the user picked language / username there
+    default_native = st.session_state.get("launcher_native", "English")
+    if default_native not in LANGUAGES:
+        default_native = "English"
+    default_target = st.session_state.get("launcher_target", "Ukrainian")
+
     c1, c2 = st.columns(2)
-    with c1: native = st.selectbox("🌐 Native language", LANGUAGES)
-    with c2: target = st.selectbox("🎯 Target language", [l for l in LANGUAGES if l != native])
+    with c1:
+        native = st.selectbox(
+            "🌐 Native language", LANGUAGES,
+            index=LANGUAGES.index(default_native),
+        )
+    with c2:
+        target_options = [l for l in LANGUAGES if l != native]
+        target_idx     = (target_options.index(default_target)
+                          if default_target in target_options else 0)
+        target = st.selectbox("🎯 Target language", target_options,
+                              index=target_idx)
 
     try:
         df = cfg["load"](str(db_path), native, target)
@@ -889,7 +924,8 @@ def render_setup():
     lessons   = cfg["get_lessons"](df)
     # Suffix language_pair with module so grammar/vocab progress are tracked separately
     lang_pair = f"{WHISPER_LANG.get(native,'?')}-{WHISPER_LANG.get(target,'?')}-{cfg['lang_suffix']}"
-    user_id   = st.text_input("👤 Your name", value="student1")
+    default_user = st.session_state.get("launcher_user", "student1")
+    user_id      = st.text_input("👤 Your name", value=default_user)
 
     if not lessons:
         st.warning(f"⚠️ No {cfg['label'].lower()} lessons available for {native} → {target}. "
@@ -1162,7 +1198,13 @@ def _inject_css():
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 .stApp{background:#0d0d14;color:#e2e2f0;}
-#MainMenu,footer,header{visibility:hidden;}
+#MainMenu,footer{visibility:hidden;}
+/* Keep Streamlit's sidebar collapse/expand control reachable */
+header{background:transparent !important;}
+header [data-testid="stToolbar"]{display:none;}
+header [data-testid="stDecoration"]{display:none;}
+[data-testid="collapsedControl"]{visibility:visible !important;
+    opacity:1 !important; display:flex !important; z-index:9999 !important;}
 
 .step-header{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #2a2a4a;border-radius:14px;padding:18px 26px;margin-bottom:18px;}
 .step-num{font-family:'JetBrains Mono',monospace;color:#6060c0;font-size:.78rem;margin-bottom:4px;}
@@ -1177,12 +1219,25 @@ html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 .prow{display:flex;align-items:center;padding:11px 18px;border-bottom:1px solid #1e1e30;gap:14px;}
 .prow:last-child{border-bottom:none;}
 .prow:hover{background:#1a1a2a;}
-.pnum{font-family:'JetBrains Mono',monospace;color:#4040a0;font-size:.73rem;min-width:26px;}
-.pnat{color:#5a5a80;flex:1;font-size:.93rem;}
-.ptgt{color:#9090b8;flex:1;font-size:.93rem;font-weight:500;}
-.phide{color:#2a2a4a;flex:1;font-style:italic;font-size:.82rem;}
+.pnum{font-family:'JetBrains Mono',monospace;color:#6060d0;font-size:.78rem;min-width:26px;}
+.pnat{color:#c8c8e8;flex:1;font-size:.98rem;}
+.ptgt{color:#ffffff;flex:1;font-size:.98rem;font-weight:500;}
+.phide{color:#404060;flex:1;font-style:italic;font-size:.85rem;}
 .spass{background:#0d2e1a;color:#40c070;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
 .sfail{background:#2e0d0d;color:#c04040;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
+
+/* Step 3 — make choice buttons readable (dark theme instead of light) */
+.stApp .stButton > button[kind="secondary"]{
+    background:#1a1a2e !important;
+    color:#f0f0ff !important;
+    border:1px solid #2a2a4a !important;
+    font-weight:500 !important;
+}
+.stApp .stButton > button[kind="secondary"]:hover{
+    background:#262648 !important;
+    border-color:#5050b0 !important;
+    color:#ffffff !important;
+}
 
 .timer{font-family:'JetBrains Mono',monospace;font-size:2.4rem;color:#a0a0ff;text-align:center;padding:14px;background:#13131e;border-radius:12px;border:1px solid #2a2a4a;margin:10px 0;}
 .prow-active{background:#1e1e40 !important;border-left:3px solid #6060d0;}
@@ -1223,13 +1278,28 @@ def main(module: str = "grammar"):
                 total_lessons = max(len(cfg["get_lessons"](df_all_for_total)), 1)
             except Exception:
                 total_lessons = TOTAL_LESSONS
-            lesson_pct = round((state.lesson_id - 1) / total_lessons * 100, 1)
+
+            # ── User path: which exercise out of all, % to finish ──
+            # "Completed" = fully-finished lessons (lesson_id - 1).
+            # We still show "lesson N / M" so the user knows which one is open.
+            completed_lessons = max(state.lesson_id - 1, 0)
+            lesson_pct = round(completed_lessons / total_lessons * 100, 1)
             st.markdown(
-                f'<div class="progress-info">'
-                f'<span>{cfg["lesson_word"]} {state.lesson_id} / {total_lessons}</span>'
+                f'<div style="background:#13131e;border:1px solid #2a2a4a;'
+                f'border-radius:10px;padding:10px 12px;margin:4px 0 10px">'
+                f'<div style="color:#8080a0;font-size:.7rem;'
+                f'font-family:\'JetBrains Mono\',monospace;'
+                f'text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">'
+                f'Your path · {cfg["label"]}</div>'
+                f'<div style="color:#f0f0ff;font-size:1.05rem;font-weight:600">'
+                f'{cfg["lesson_word"]} {state.lesson_id} / {total_lessons}'
+                f'</div>'
+                f'<div class="progress-info" style="margin-top:6px">'
+                f'<span>{completed_lessons} done · {total_lessons - completed_lessons} to go</span>'
                 f'<span>{lesson_pct}%</span></div>'
                 f'<div class="progress-bar-wrap">'
-                f'<div class="progress-bar-fill" style="width:{lesson_pct}%"></div></div>',
+                f'<div class="progress-bar-fill" style="width:{lesson_pct}%"></div></div>'
+                f'</div>',
                 unsafe_allow_html=True
             )
             step_pct = round((cur_step - 1) / 8 * 100, 0)
@@ -1279,7 +1349,8 @@ def main(module: str = "grammar"):
                 key="nav_jump",
             )
             if jump_to != cur_step:
-                if st.button(f"Go to Step {jump_to}", use_container_width=True,
+                if st.button(f"Go to Step {jump_to}",
+                             use_container_width=True,
                              key="nav_go"):
                     _clear_lesson()
                     st.session_state["lesson_step"] = jump_to
@@ -1319,13 +1390,8 @@ def main(module: str = "grammar"):
             _clear_lesson()
             st.session_state["lesson_step"] = step + 1
             st.rerun()
-        elif step not in REQUIRED_STEPS:
-            st.markdown("---")
-            if st.button("⏭ Skip this step", key=f"skip_{step}",
-                         help="This step is optional — you can skip it"):
-                _clear_lesson()
-                st.session_state["lesson_step"] = step + 1
-                st.rerun()
+        # Optional steps already expose their own "Continue → / Done → / Skip →"
+        # button inside the step body, so no global skip button is needed here.
 
 
 if __name__ == "__main__":
