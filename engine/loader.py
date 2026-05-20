@@ -53,7 +53,7 @@ def load_phrases(db_path: str, native_lang: str, target_lang: str) -> pd.DataFra
     df = df[mask].copy()
 
     keep = ["lesson_id", "phrase_id", "difficulty", native_col, target_col]
-    for opt in ("topic_en", "topic_uk"):
+    for opt in ("topic_en", "topic_uk", "topic_es", "topic_ko"):
         if opt in df.columns:
             keep.append(opt)
     result = df[keep].copy()
@@ -70,22 +70,35 @@ def get_available_lessons(df: pd.DataFrame) -> list[int]:
     return sorted(df["lesson_id"].unique().tolist())
 
 
+_TOPIC_COL_FOR_LANG = {
+    "English":   "topic_en",
+    "Ukrainian": "topic_uk",
+    "Spanish":   "topic_es",
+    "Korean":    "topic_ko",
+}
+
+
 def get_lesson_topics(df: pd.DataFrame, native_lang: str = "English") -> dict:
     """
     Return {lesson_id: topic_str} using the column matching the user's
-    native language (topic_uk for Ukrainians, topic_en otherwise).
-    If the topic columns aren't present in the workbook, returns {}.
+    native language (topic_uk for Ukrainians, topic_es for Spaniards, etc.).
+    Falls back to topic_en if a translation is missing; returns {} if no
+    topic columns are present in the workbook.
     """
-    # Prefer the topic in the user's native language; fall back to English
-    if native_lang == "Ukrainian" and "topic_uk" in df.columns:
-        col = "topic_uk"
-    elif "topic_en" in df.columns:
-        col = "topic_en"
-    else:
+    preferred = _TOPIC_COL_FOR_LANG.get(native_lang, "topic_en")
+    if preferred not in df.columns and "topic_en" not in df.columns:
         return {}
     out = {}
     for lid, sub in df.groupby("lesson_id"):
-        val = sub[col].dropna().astype(str).str.strip()
-        if len(val):
-            out[int(lid)] = val.iloc[0]
+        val = None
+        if preferred in sub.columns:
+            v = sub[preferred].dropna().astype(str).str.strip()
+            if len(v) and v.iloc[0]:
+                val = v.iloc[0]
+        if val is None and "topic_en" in sub.columns:
+            v = sub["topic_en"].dropna().astype(str).str.strip()
+            if len(v) and v.iloc[0]:
+                val = v.iloc[0]
+        if val:
+            out[int(lid)] = val
     return out
