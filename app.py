@@ -38,6 +38,7 @@ st.set_page_config(
 # are no-ops (they're wrapped in try/except).
 import grammar as grammar_app          # noqa: E402
 import reading_app                  # noqa: E402
+import custom_app                   # noqa: E402
 
 # Used for fetching progress on the launcher
 from engine.loader  import (                  # noqa: E402
@@ -46,6 +47,7 @@ from engine.loader  import (                  # noqa: E402
 from engine.vocab_loader import (             # noqa: E402
     load_vocab, get_available_vocab_lessons,
 )
+from engine.custom_store import list_user_lessons  # noqa: E402
 from engine.logger import get_progress        # noqa: E402
 
 LANGUAGES = ["English", "Ukrainian", "Spanish", "Korean"]
@@ -76,6 +78,13 @@ MODULES = {
         "tagline":     "English phonics - 80 lessons with IPA audio",
         "color_from":  "#2e1a16",
         "color_to":    "#2e1a1a",
+    },
+    "custom": {
+        "label":       "My Phrases",
+        "icon":        "📝",
+        "tagline":     "Create your own lessons - same 8-step practice flow",
+        "color_from":  "#2e162e",
+        "color_to":    "#1a1a2e",
     },
 }
 
@@ -165,13 +174,22 @@ def _module_progress_card(module_key: str, native: str, target: str,
         total = _count_grammar_lessons(native, target)
         lang_pair = f"{WHISPER_LANG.get(native,'?')}-{WHISPER_LANG.get(target,'?')}-grammar"
         word = "Lesson"
-    else:  # vocab
+    elif module_key == "vocab":
         total = _count_vocab_lessons(native, target)
         lang_pair = f"{WHISPER_LANG.get(native,'?')}-{WHISPER_LANG.get(target,'?')}-vocab"
         word = "Topic"
+    else:  # custom — show how many lessons the user has created for this pair
+        try:
+            total = len(list_user_lessons(user_id, native_lang=native,
+                                          target_lang=target))
+        except Exception:
+            total = 0
+        lang_pair = f"{WHISPER_LANG.get(native,'?')}-{WHISPER_LANG.get(target,'?')}-custom"
+        word = "Lesson"
     pr = _module_progress(user_id, lang_pair, total)
     pr["lang_pair"]   = lang_pair
     pr["lesson_word"] = word
+    pr["module_key"]  = module_key
     return pr
 
 
@@ -282,7 +300,8 @@ def render_launcher():
 
     st.markdown("<div style='margin:10px 0 18px'></div>", unsafe_allow_html=True)
 
-    cols = st.columns(3)
+    # One column per module — auto-extends if more modules are added later.
+    cols = st.columns(len(MODULES))
     for col, (key, info) in zip(cols, MODULES.items()):
         with col:
             pr   = _module_progress_card(key, native, target, user_id)
@@ -375,6 +394,8 @@ def main():
         grammar_app.main(module="vocab")
     elif active == "reading":
         reading_app.main()
+    elif active == "custom":
+        custom_app.main()
     else:
         # Unknown module - reset
         for k in list(st.session_state):

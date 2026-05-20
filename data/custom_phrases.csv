@@ -1,0 +1,8 @@
+user_id,lesson_id,lesson_name,phrase_id,native_lang,target_lang,native,target,created_at
+student1,1,Тварини,1,Ukrainian,English,Собака,Dog,2026-05-20T14:44:13
+student1,1,Тварини,2,Ukrainian,English,Кішка,Cat,2026-05-20T14:44:13
+student1,1,Тварини,3,Ukrainian,English,Кролик,Rabbit,2026-05-20T14:44:13
+student1,1,Тварини,4,Ukrainian,English,Хом'як,Hamster,2026-05-20T14:44:13
+student1,1,Тварини,5,Ukrainian,English,Морська свинка,Guinea pig,2026-05-20T14:44:13
+student1,1,Тварини,6,Ukrainian,English,Папуга,Parrot,2026-05-20T14:44:13
+student1,1,Тварини,7,Ukrainian,English,Черепаха,Turtle,2026-05-20T14:44:13

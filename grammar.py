@@ -27,6 +27,7 @@ from engine.tts     import get_audio_path
 from engine.stt      import transcribe_bytes, whisper_available
 from engine.logger  import SessionLogger, get_last_lesson, get_progress, save_progress
 from engine.gec import correct as gec_correct, gec_available
+from engine import i18n
 
 # Prefer the workbook with lesson titles (topic_en / topic_uk columns) if it
 # exists; otherwise fall back to the original. Both have identical phrase data.
@@ -61,6 +62,22 @@ def _module_config(module: str) -> dict:
             "icon":        "📖",
             "lang_suffix": "vocab",
             "lesson_word": "Topic",
+        }
+    if module == "custom":
+        # User-created lessons. Data is loaded on demand by custom_app,
+        # so the "load"/"get_lessons" callables are intentionally None —
+        # they're never called for this module (custom_app pushes the
+        # session into st.session_state before grammar.main() runs).
+        return {
+            "db_path":     None,
+            "load":        None,
+            "get_lesson":  None,
+            "get_lessons": None,
+            "topics":      None,
+            "label":       "My Phrases",
+            "icon":        "📝",
+            "lang_suffix": "custom",
+            "lesson_word": "Lesson",
         }
     return {
         "db_path":     DB_PATH,
@@ -133,6 +150,27 @@ header [data-testid="stDecoration"]{display:none;}
 .phide{color:#404060;flex:1;font-style:italic;font-size:.85rem;}
 .spass{background:#0d2e1a;color:#40c070;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
 .sfail{background:#2e0d0d;color:#c04040;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
+
+/* Color-coded step type — left border tells the user what kind of step it is */
+.step-header.step-type-reading     { border-left: 4px solid #5060c0; }
+.step-header.step-type-listening   { border-left: 4px solid #8050b0; }
+.step-header.step-type-matching    { border-left: 4px solid #40a0a0; }
+.step-header.step-type-translation { border-left: 4px solid #40a060; }
+.step-header.step-type-composing   { border-left: 4px solid #c06080; }
+
+/* Big icon next to the step title */
+.step-icon-row { display:flex; align-items:center; gap:16px; margin-top:6px; }
+.step-icon-big { font-size:2.4rem; line-height:1; flex-shrink:0; }
+
+/* Subtle pulse so users notice the 'record yourself' control */
+@keyframes pulse-soft {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(96,96,208,.35); }
+    50%      { box-shadow: 0 0 0 10px rgba(96,96,208,0); }
+}
+.stApp [data-testid="stAudioInput"] button {
+    animation: pulse-soft 2.6s ease-in-out infinite;
+    border-radius: 50%;
+}
 
 /* Step 3 — make choice buttons readable (dark theme instead of light) */
 .stApp .stButton > button[kind="secondary"]{
@@ -531,19 +569,45 @@ def phrase_table(phrases, show_native=True, show_target=True, scores=None, highl
     st.markdown(f'<div class="ptable">{html}</div>', unsafe_allow_html=True)
 
 
-def step_hdr(step, title, desc, total=8):
+def step_hdr(step, title=None, desc=None, total=8):
+    """Render the step header.
+
+    Title and hint are read from engine.i18n based on the current session's
+    native language. Explicit ``title``/``desc`` args still win if passed.
+    """
+    # Look up the user's native language from the active session
+    sess = st.session_state.get("session")
+    native_lang = sess.state.native_lang if sess else "English"
+
+    if title is None:
+        title = i18n.get(native_lang, "titles", step)
+    if desc is None:
+        desc = i18n.get(native_lang, "hints", step)
+
+    icon       = i18n.step_icon(step)
+    s_type     = i18n.step_type(step)
+    step_label = i18n.get(native_lang, "step_label")
+    req_word   = i18n.get(native_lang, "required")
+
     pills = "".join(
         f'<span class="pill {"pill-active" if s==step else "pill-done" if s<step else "pill-required" if s in REQUIRED_STEPS and s>step else ""}">'
         f'{"🔒" if s in REQUIRED_STEPS and s > step else s}</span>'
         for s in range(1, total+1)
     )
-    req_note = ' <span style="color:#d08040;font-size:.72rem;">🔒 required</span>' if step in REQUIRED_STEPS else ''
+    req_note = (f' <span style="color:#d08040;font-size:.72rem;">🔒 {req_word}</span>'
+                if step in REQUIRED_STEPS else '')
+
     st.markdown(f"""
-    <div class="step-header">
+    <div class="step-header step-type-{s_type}">
       <div class="step-pills">{pills}</div>
-      <div class="step-num">STEP {step} / {total}{req_note}</div>
-      <div class="step-title">{title}</div>
-      <div class="step-desc">{desc}</div>
+      <div class="step-num">{step_label} {step} / {total}{req_note}</div>
+      <div class="step-icon-row">
+        <span class="step-icon-big">{icon}</span>
+        <div style="flex:1">
+          <div class="step-title">{title}</div>
+          <div class="step-desc">{desc}</div>
+        </div>
+      </div>
     </div>""", unsafe_allow_html=True)
 
 
@@ -583,8 +647,7 @@ def do_score(session: LessonSession, audio: bytes, expected: str,
 # ═══════════════════════════════════════════════════════════════════════════
 def step1(session: LessonSession, tts_lang, wh_lang):
     session.start_step(1)
-    step_hdr(1, "Read All Phrases",
-             "Read every phrase in the target language. Both languages are visible.")
+    step_hdr(1)
     phrases = session.phrases()
     scores  = st.session_state.get("s1_scores", {})
     phrase_table(phrases, show_native=True, show_target=True, scores=scores)
@@ -617,8 +680,7 @@ def step1(session: LessonSession, tts_lang, wh_lang):
 # ═══════════════════════════════════════════════════════════════════════════
 def step2(session: LessonSession, tts_lang, wh_lang):
     session.start_step(2)
-    step_hdr(2, "Listen & Repeat",
-             "Listen to each phrase and repeat it aloud. Phrases play automatically with pauses.")
+    step_hdr(2)
     phrases = session.phrases()
     paths   = [get_audio_path(p["target"], tts_lang) for p in phrases]
     pauses  = [phrase_pause(p["target"]) for p in phrases]
@@ -643,8 +705,7 @@ def step2(session: LessonSession, tts_lang, wh_lang):
 # ═══════════════════════════════════════════════════════════════════════════
 def step3(session: LessonSession, tts_lang, wh_lang):
     session.start_step(3)
-    step_hdr(3, "Listen & Match",
-             "Listen to the phrase and find its translation from the shuffled list.")
+    step_hdr(3)
     phrases = session.phrases()
 
     if "s3_idx" not in st.session_state:
@@ -715,8 +776,7 @@ def step3(session: LessonSession, tts_lang, wh_lang):
 # ═══════════════════════════════════════════════════════════════════════════
 def step4(session: LessonSession, tts_lang, wh_lang):
     session.start_step(4)
-    step_hdr(4, "Speed Reading",
-             "Read all phrases as fast as you can — your reading speed will be measured from the recording.")
+    step_hdr(4)
     phrases = session.phrases()
     phrase_table(phrases, show_native=False, show_target=True)
 
@@ -756,8 +816,7 @@ def step4(session: LessonSession, tts_lang, wh_lang):
 # ═══════════════════════════════════════════════════════════════════════════
 def step5(session: LessonSession, tts_lang, wh_lang):
     session.start_step(5)
-    step_hdr(5, "Shadowing",
-             "Listen to each phrase and repeat it in the target language. Only native translation shown.")
+    step_hdr(5)
     phrases = session.phrases()
     paths   = [get_audio_path(p["target"], tts_lang) for p in phrases]
     pauses  = [phrase_pause(p["target"]) for p in phrases]
@@ -782,8 +841,7 @@ def step5(session: LessonSession, tts_lang, wh_lang):
 # ═══════════════════════════════════════════════════════════════════════════
 def step6(session: LessonSession, tts_lang, wh_lang):
     session.start_step(6)
-    step_hdr(6, "Active Translation",
-             "Translate all phrases aloud in one go. Only native language shown.")
+    step_hdr(6)
     phrases = session.phrases()
     scores  = st.session_state.get("s6_scores", {})
     phrase_table(phrases, show_native=True, show_target=False, scores=scores)
@@ -818,8 +876,7 @@ _S7_MIN_SIMILARITY        = 0.80  # ≥ 80% similarity
 
 def step7(session: LessonSession, tts_lang, wh_lang):
     session.start_step(7)
-    step_hdr(7, "Speed Translation",
-             "Translate all phrases as fast as possible — speed will be measured from the recording.")
+    step_hdr(7)
     phrases = session.phrases()
     phrase_table(phrases, show_native=True, show_target=False)
 
@@ -909,6 +966,7 @@ def render_complete(session: LessonSession):
         session.complete()
         st.session_state["_progress_saved"] = True
 
+    module = _current_module()
     c1, c2, c3 = st.columns(3)
     with c1:
         if st.button("🔄 Redo lesson", use_container_width=True, type="primary"):
@@ -917,7 +975,14 @@ def render_complete(session: LessonSession):
             st.session_state["lesson_step"] = 1
             st.rerun()
     with c2:
-        if st.button("▶ Next lesson", use_container_width=True):
+        # Custom mode has no fixed "next lesson" — show "Back to my phrases" instead
+        if module == "custom":
+            if st.button("📝 Back to my phrases", use_container_width=True):
+                st.session_state.pop("_progress_saved", None)
+                _clear_all()
+                st.session_state["active_module"] = "custom"
+                st.rerun()
+        elif st.button("▶ Next lesson", use_container_width=True):
             # Load next lesson automatically — module-aware
             sess   = st.session_state["session"]
             state  = sess.state
@@ -1099,7 +1164,7 @@ def step8(session: LessonSession, tts_lang, wh_lang):
         title = "Grammar Check — Create Your Own Phrases"
         desc  = "Say or type phrases in the target language. The system will correct grammar errors."
 
-    step_hdr(8, title, desc, total=8)
+    step_hdr(8, total=8)
 
     phrases = session.phrases()
 
@@ -1325,6 +1390,27 @@ header [data-testid="stDecoration"]{display:none;}
 .spass{background:#0d2e1a;color:#40c070;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
 .sfail{background:#2e0d0d;color:#c04040;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
 
+/* Color-coded step type — left border tells the user what kind of step it is */
+.step-header.step-type-reading     { border-left: 4px solid #5060c0; }
+.step-header.step-type-listening   { border-left: 4px solid #8050b0; }
+.step-header.step-type-matching    { border-left: 4px solid #40a0a0; }
+.step-header.step-type-translation { border-left: 4px solid #40a060; }
+.step-header.step-type-composing   { border-left: 4px solid #c06080; }
+
+/* Big icon next to the step title */
+.step-icon-row { display:flex; align-items:center; gap:16px; margin-top:6px; }
+.step-icon-big { font-size:2.4rem; line-height:1; flex-shrink:0; }
+
+/* Subtle pulse so users notice the 'record yourself' control */
+@keyframes pulse-soft {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(96,96,208,.35); }
+    50%      { box-shadow: 0 0 0 10px rgba(96,96,208,0); }
+}
+.stApp [data-testid="stAudioInput"] button {
+    animation: pulse-soft 2.6s ease-in-out infinite;
+    border-radius: 50%;
+}
+
 /* Step 3 — make choice buttons readable (dark theme instead of light) */
 .stApp .stButton > button[kind="secondary"]{
     background:#1a1a2e !important;
@@ -1372,9 +1458,17 @@ def main(module: str = "grammar"):
             state = sess.state
             cur_step = st.session_state['lesson_step']
             try:
-                df_all_for_total = cfg["load"](str(cfg["db_path"]),
-                                               state.native_lang, state.target_lang)
-                total_lessons = max(len(cfg["get_lessons"](df_all_for_total)), 1)
+                if module == "custom":
+                    # Custom: count this user's saved lessons for the pair
+                    from engine.custom_store import list_user_lessons
+                    cu_df = list_user_lessons(state.user_id,
+                                              native_lang=state.native_lang,
+                                              target_lang=state.target_lang)
+                    total_lessons = max(len(cu_df), 1)
+                else:
+                    df_all_for_total = cfg["load"](str(cfg["db_path"]),
+                                                   state.native_lang, state.target_lang)
+                    total_lessons = max(len(cfg["get_lessons"](df_all_for_total)), 1)
             except Exception:
                 total_lessons = TOTAL_LESSONS
 
@@ -1456,6 +1550,11 @@ def main(module: str = "grammar"):
             st.rerun()
 
     if "lesson_step" not in st.session_state:
+        if module == "custom":
+            # Custom mode owns its own setup screen (lesson list + add form)
+            import custom_app
+            custom_app.render_setup()
+            return
         render_setup()
         return
 
