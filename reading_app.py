@@ -637,18 +637,26 @@ def do_step1(rows: pd.DataFrame) -> bool:
     if rule_txt:
         st.markdown(f'<div class="rule">📖 {rule_txt}</div>', unsafe_allow_html=True)
 
-    # Show all letters/words with transcription
-    lessons_table(rows, show_word=True, show_trans=True)
-
-    # Preload audio paths and render autoplaylist
-    paths = preload_lesson_audio(rows, "s1")
-    st.markdown("Натисни **▶ Play All** — букви/слова звучатимуть з паузою 1 секунда.")
-    components.html(autoplaylist_html(paths, pause_secs=1.0, uid="s1"),
-                    height=130, scrolling=False)
-
+    # Continue button ABOVE the player — user can skip ahead without scrolling.
     if st.button("Продовжити →", type="primary", use_container_width=True,
                  key="s1_done"):
         return True
+
+    # Combined player + word-list with active-word highlight (reused from grammar).
+    from grammar import autoplaylist_with_table
+    paths = preload_lesson_audio(rows, "s1")
+    phrase_dicts = [
+        {"native": str(r["word"]), "target": str(r["transcription"])}
+        for _, r in rows.iterrows()
+    ]
+    pauses = [1.0 + 0.2 * max(0, len(str(r["word"])) - 2)
+              for _, r in rows.iterrows()]
+    height = 200 + 48 * len(rows)
+    components.html(
+        autoplaylist_with_table(phrase_dicts, paths, pauses, uid="rs1",
+                                show_native=True, show_target=True),
+        height=height, scrolling=True,
+    )
     return False
 
 
@@ -668,6 +676,10 @@ def do_step2(rows: pd.DataFrame) -> bool:
     # All words + transcription on screen
     lessons_table(rows, show_word=True, show_trans=True, scores=scores)
 
+    # Next button ABOVE the mic so users can skip without scrolling
+    if st.button("Далі →", use_container_width=True, key="s2_next"):
+        return True
+
     # Expected string: words joined by ". " so Whisper hears separate utterances
     expected = ". ".join(str(r["word"]).strip() for _, r in rows.iterrows())
 
@@ -677,38 +689,33 @@ def do_step2(rows: pd.DataFrame) -> bool:
     if not STT_OK or not SCORER_OK:
         st.caption("⚠️ Для перевірки потрібно: `pip install openai-whisper rapidfuzz`")
 
-    c1, c2 = st.columns([3, 1])
-    with c1:
-        if st.button("✓ Перевірити вимову", type="primary",
-                     use_container_width=True, key="s2_check"):
-            if not audio:
-                st.warning("Спочатку запиши аудіо!")
-            elif not STT_OK or not SCORER_OK:
-                st.warning("Whisper/RapidFuzz не встановлені.")
+    if st.button("✓ Перевірити вимову", type="primary",
+                 use_container_width=True, key="s2_check"):
+        if not audio:
+            st.warning("Спочатку запиши аудіо!")
+        elif not STT_OK or not SCORER_OK:
+            st.warning("Whisper/RapidFuzz не встановлені.")
+        else:
+            t_ms = _audio_duration_ms(audio)
+            with st.spinner("Розпізнаємо мовлення..."):
+                r = score_audio(audio, expected)
+            if r:
+                # Mark every row with the same overall score (whole-recording match)
+                scores = {i: r for i in range(len(rows))}
+                st.session_state["s2_scores"] = scores
+                color = "var(--mova-mint)" if r["passed"] else "var(--mova-coral-ink)"
+                st.markdown(
+                    f'<div style="text-align:center;font-size:1.6rem;'
+                    f'color:{color};font-weight:600">{int(r["score"]*100)}%</div>',
+                    unsafe_allow_html=True,
+                )
+                _log_score(step=2, phrase_id=0,
+                           similarity=r["score"],
+                           response_time_ms=t_ms,
+                           success=bool(r["passed"]))
+                st.rerun()
             else:
-                t_ms = _audio_duration_ms(audio)
-                with st.spinner("Розпізнаємо мовлення..."):
-                    r = score_audio(audio, expected)
-                if r:
-                    # Mark every row with the same overall score (whole-recording match)
-                    scores = {i: r for i in range(len(rows))}
-                    st.session_state["s2_scores"] = scores
-                    color = "var(--mova-mint)" if r["passed"] else "var(--mova-coral-ink)"
-                    st.markdown(
-                        f'<div style="text-align:center;font-size:1.6rem;'
-                        f'color:{color};font-weight:600">{int(r["score"]*100)}%</div>',
-                        unsafe_allow_html=True,
-                    )
-                    _log_score(step=2, phrase_id=0,
-                               similarity=r["score"],
-                               response_time_ms=t_ms,
-                               success=bool(r["passed"]))
-                    st.rerun()
-                else:
-                    st.error("Не вдалося розпізнати аудіо.")
-    with c2:
-        if st.button("Далі →", use_container_width=True, key="s2_next"):
-            return True
+                st.error("Не вдалося розпізнати аудіо.")
     return False
 
 
@@ -809,13 +816,7 @@ def do_step4(rows: pd.DataFrame) -> bool:
     if rule_txt:
         st.markdown(f'<div class="rule">📖 {rule_txt}</div>', unsafe_allow_html=True)
 
-    lessons_table(rows, show_word=True, show_trans=True)
-
-    paths = preload_lesson_audio(rows, "s4")
-    st.markdown("Натисни **▶ Play All** — пауза між аудіо 1 секунда.")
-    components.html(autoplaylist_html(paths, pause_secs=1.0, uid="s4"),
-                    height=130, scrolling=False)
-
+    # Continue / Skip buttons ABOVE the player
     c1, c2 = st.columns(2)
     with c1:
         if st.button("Продовжити →", type="primary",
@@ -824,6 +825,22 @@ def do_step4(rows: pd.DataFrame) -> bool:
     with c2:
         if st.button("⏭ Пропустити", key="s4_skip", use_container_width=True):
             return True
+
+    # Combined player + word-list with active-word highlight (reused from grammar).
+    from grammar import autoplaylist_with_table
+    paths = preload_lesson_audio(rows, "s4")
+    phrase_dicts = [
+        {"native": str(r["word"]), "target": str(r["transcription"])}
+        for _, r in rows.iterrows()
+    ]
+    pauses = [1.0 + 0.2 * max(0, len(str(r["word"])) - 2)
+              for _, r in rows.iterrows()]
+    height = 200 + 48 * len(rows)
+    components.html(
+        autoplaylist_with_table(phrase_dicts, paths, pauses, uid="rs4",
+                                show_native=True, show_target=True),
+        height=height, scrolling=True,
+    )
     return False
 
 
@@ -833,6 +850,10 @@ def do_step4(rows: pd.DataFrame) -> bool:
 
 def do_step5(rows: pd.DataFrame) -> bool:
     shdr(5)
+
+    # Mic FIRST so mobile users don't need to scroll past the word grid
+    st.markdown("#### 🎙️ Запиши себе, поки читаєш вголос всі слова")
+    audio = mic("s5")
 
     # Show all words as grid
     chips = "".join(
@@ -849,9 +870,6 @@ def do_step5(rows: pd.DataFrame) -> bool:
         f'background:var(--mova-surface);border-radius:12px">{chips}</div>',
         unsafe_allow_html=True,
     )
-
-    st.markdown("#### 🎙️ Запиши себе, поки читаєш вголос всі слова")
-    audio = mic("s5")
 
     if not STT_OK or not SCORER_OK:
         st.caption("⚠️ Для перевірки вимови потрібно: `pip install openai-whisper rapidfuzz`")

@@ -421,13 +421,14 @@ def autoplaylist_with_table(phrases, audio_paths, pause_secs, uid="pl",
   }}
 </style>
 
-<div class="ph-table">{rows_html}</div>
-
+<!-- Player FIRST so mobile users see the Play All button without scrolling -->
 <div class="pl-wrap">
   <button id="pl-btn-{uid}" class="pl-btn" onclick="plToggle_{uid}()">▶ Play All</button>
   <span id="pl-stat-{uid}" class="pl-stat">ready</span>
   <div id="pl-bar-{uid}" class="pl-bar"></div>
 </div>
+
+<div class="ph-table">{rows_html}</div>
 
 <script>
 (function(){{
@@ -650,28 +651,28 @@ def step1(session: LessonSession, tts_lang, wh_lang):
     step_hdr(1)
     phrases = session.phrases()
     scores  = st.session_state.get("s1_scores", {})
-    phrase_table(phrases, show_native=True, show_target=True, scores=scores)
 
-    st.markdown("#### 🎙️ Record yourself reading all phrases")
+    # Mic at the top so mobile users don't need to scroll past the phrase list
     audio = audio_input("s1")
 
-    c1, c2 = st.columns([3,1])
-    with c1:
-        # Submit button appears only after the user records audio
-        if audio and st.button("Submit & Check", type="primary",
-                               use_container_width=True, key="s1_submit"):
-            full = ". ".join(p["target"] for p in phrases)
-            r    = do_score(session, audio, full, wh_lang, step=1, phrase_id=0)
-            if r:
-                scores = {i: r for i in range(len(phrases))}
-                st.session_state["s1_scores"] = scores
-                st.markdown(
-                    f"{'✓' if r['passed'] else '✗'} **{int(r['score']*100)}%** — "
-                    f"`{r['transcribed']}`"
-                )
-    with c2:
-        if st.button("Next →", use_container_width=True, key="s1_next"):
-            return True
+    if audio and st.button("Submit & Check", type="primary",
+                           use_container_width=True, key="s1_submit"):
+        full = ". ".join(p["target"] for p in phrases)
+        r    = do_score(session, audio, full, wh_lang, step=1, phrase_id=0)
+        if r:
+            scores = {i: r for i in range(len(phrases))}
+            st.session_state["s1_scores"] = scores
+            st.markdown(
+                f"{'✓' if r['passed'] else '✗'} **{int(r['score']*100)}%** — "
+                f"`{r['transcribed']}`"
+            )
+
+    # Phrase list
+    phrase_table(phrases, show_native=True, show_target=True, scores=scores)
+
+    # Next button below phrases
+    if st.button("Next →", use_container_width=True, key="s1_next"):
+        return True
     return False
 
 
@@ -685,7 +686,7 @@ def step2(session: LessonSession, tts_lang, wh_lang):
     paths   = [get_audio_path(p["target"], tts_lang) for p in phrases]
     pauses  = [phrase_pause(p["target"]) for p in phrases]
 
-    st.markdown("Press **▶ Play All** to start. Repeat each phrase aloud during the pause.")
+    # Caption removed — step_hdr shows the instruction in user's native language.
     # Combined table + player: the row of the currently playing phrase is highlighted
     height = 200 + 48 * len(phrases)
     components.html(
@@ -778,11 +779,8 @@ def step4(session: LessonSession, tts_lang, wh_lang):
     session.start_step(4)
     step_hdr(4)
     phrases = session.phrases()
-    phrase_table(phrases, show_native=False, show_target=True)
 
-    # ── Record & Submit ──
-    # No live timer: speed is measured from the actual audio recording length.
-    st.markdown("#### 🎙️ Record yourself reading all phrases")
+    # Mic at the top so mobile users don't need to scroll past the phrase list
     audio = audio_input("s4")
 
     # Submit button appears only after the user records audio
@@ -803,11 +801,13 @@ def step4(session: LessonSession, tts_lang, wh_lang):
         st.success(f"🏁 Reading speed: **{res['time']}s** · **{int(res['score']*100)}%** match")
         st.caption(f"Transcribed: {res['text']}")
 
-    c1, c2 = st.columns([3,1])
-    with c2:
-        if st.button("Done →", use_container_width=True, key="s4_done"):
-            st.session_state.pop("s4_result", None)
-            return True
+    # Phrase list
+    phrase_table(phrases, show_native=False, show_target=True)
+
+    # Done button below phrases
+    if st.button("Done →", use_container_width=True, key="s4_done"):
+        st.session_state.pop("s4_result", None)
+        return True
     return False
 
 
@@ -821,7 +821,7 @@ def step5(session: LessonSession, tts_lang, wh_lang):
     paths   = [get_audio_path(p["target"], tts_lang) for p in phrases]
     pauses  = [phrase_pause(p["target"]) for p in phrases]
 
-    st.markdown("Press **▶ Play All** — listen and repeat each phrase during the pause.")
+    # Caption removed — step_hdr shows the instruction in user's native language.
     # Combined table + player: only native is shown, target row is highlighted as it plays
     height = 200 + 48 * len(phrases)
     components.html(
@@ -844,25 +844,26 @@ def step6(session: LessonSession, tts_lang, wh_lang):
     step_hdr(6)
     phrases = session.phrases()
     scores  = st.session_state.get("s6_scores", {})
-    phrase_table(phrases, show_native=True, show_target=False, scores=scores)
 
-    st.markdown("#### 🎙️ Record yourself translating all phrases")
+    # Mic at the top so mobile users don't need to scroll past the phrase list
     audio = audio_input("s6")
 
-    c1, c2 = st.columns([3,1])
-    with c1:
-        if audio and st.button("Submit & Score", type="primary", use_container_width=True, key="s6_submit"):
-            full = ". ".join(p["target"] for p in phrases)
-            r = do_score(session, audio, full, wh_lang, step=6, phrase_id=0)
-            if r:
-                scores = {i: r for i in range(len(phrases))}
-                st.session_state["s6_scores"] = scores
-                st.session_state["s6_done"] = True
-                st.markdown(f"{'✓' if r['passed'] else '✗'} **{int(r['score']*100)}%** — `{r['transcribed']}`")
-    with c2:
-        if st.button("Next →", use_container_width=True, key="s6_next"):
-            st.session_state["s6_idx"] = 0
-            return True
+    if audio and st.button("Submit & Score", type="primary", use_container_width=True, key="s6_submit"):
+        full = ". ".join(p["target"] for p in phrases)
+        r = do_score(session, audio, full, wh_lang, step=6, phrase_id=0)
+        if r:
+            scores = {i: r for i in range(len(phrases))}
+            st.session_state["s6_scores"] = scores
+            st.session_state["s6_done"] = True
+            st.markdown(f"{'✓' if r['passed'] else '✗'} **{int(r['score']*100)}%** — `{r['transcribed']}`")
+
+    # Phrase list (native shown, target hidden)
+    phrase_table(phrases, show_native=True, show_target=False, scores=scores)
+
+    # Next button below phrases
+    if st.button("Next →", use_container_width=True, key="s6_next"):
+        st.session_state["s6_idx"] = 0
+        return True
     return False
 
 
@@ -878,7 +879,6 @@ def step7(session: LessonSession, tts_lang, wh_lang):
     session.start_step(7)
     step_hdr(7)
     phrases = session.phrases()
-    phrase_table(phrases, show_native=True, show_target=False)
 
     # ── Pass criteria for this lesson ──
     # Speed target: 1 second per 2 target-language words across all phrases
@@ -934,7 +934,11 @@ def step7(session: LessonSession, tts_lang, wh_lang):
                 ". You can still continue to Step 8."
             )
 
-        # Pass OR fail — user can always continue
+    # Phrase list in the middle (native shown, target hidden)
+    phrase_table(phrases, show_native=True, show_target=False)
+
+    # Navigation at the bottom — only after a recording was scored
+    if "s7_result" in st.session_state:
         if st.button("Continue to Step 8 →", type="primary",
                      use_container_width=True, key="s7_continue"):
             st.session_state.pop("s7_result", None)
@@ -1580,8 +1584,4 @@ def main(module: str = "grammar"):
             st.session_state["lesson_step"] = step + 1
             st.rerun()
         # Optional steps already expose their own "Continue → / Done → / Skip →"
-        # button inside the step body, so no global skip button is needed here.
-
-
-if __name__ == "__main__":
-    main()
+        # button inside the step body, so no global skip button
