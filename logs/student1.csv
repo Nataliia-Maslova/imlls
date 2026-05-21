@@ -423,3 +423,7 @@ timestamp,user_id,lesson_id,phrase_id,step,similarity,response_time_ms,attempts,
 2026-05-20T20:20:23.348316,student1,uk-en-grammar,6,0,8,1.0,764,1,1,lesson
 2026-05-20T20:20:45.488317,student1,uk-en-grammar,6,0,8,1.0,404,1,1,lesson
 2026-05-20T20:21:00.831280,student1,uk-en-grammar,6,0,8,1.0,401,1,1,lesson
+2026-05-21T08:30:49.319904,student1,uk-en-grammar,6,41,3,1.0,5,1,1,lesson
+2026-05-21T08:42:48.380544,student1,en-reading,14,104,3,1.0,0,1,1,reading
+2026-05-21T08:42:55.041498,student1,en-reading,14,105,3,1.0,0,1,1,reading
+2026-05-21T10:13:36.149767,student1,uk-es-grammar,26,200,3,1.0,4,1,1,lesson

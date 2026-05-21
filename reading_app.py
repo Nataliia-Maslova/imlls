@@ -359,14 +359,14 @@ def autoplaylist_html(audio_paths, pause_secs=1.0, uid="pl"):
     pause_ms = int(pause_secs * 1000)
     n = len(srcs)
     return f"""
-<div style="background:#13131e;border:1px solid #2a2a4a;border-radius:12px;padding:14px 18px;margin:8px 0;">
+<div style="background:#FFFFFF;border:1px solid #E8E2D8;border-radius:12px;padding:14px 18px;margin:8px 0;">
   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
     <button id="pl-btn-{uid}" onclick="plToggle_{uid}()"
-      style="background:#2a2a5a;color:#a0a0ff;border:1px solid #5050b0;border-radius:8px;
+      style="background:#ECEBFB;color:#4F46E5;border:1px solid #4F46E5;border-radius:8px;
              padding:7px 18px;cursor:pointer;font-family:JetBrains Mono,monospace;font-size:.88rem;">
       ▶ Play All
     </button>
-    <span id="pl-stat-{uid}" style="color:#6060a0;font-size:.8rem;font-family:JetBrains Mono,monospace;">ready</span>
+    <span id="pl-stat-{uid}" style="color:#7A7390;font-size:.8rem;font-family:JetBrains Mono,monospace;">ready</span>
   </div>
   <div id="pl-bar-{uid}" style="margin-top:10px;display:flex;gap:4px;flex-wrap:wrap;"></div>
 </div>
@@ -377,12 +377,12 @@ def autoplaylist_html(audio_paths, pause_secs=1.0, uid="pl"):
   const bar=document.getElementById('pl-bar-'+uid);
   for(let i=0;i<n;i++){{
     const d=document.createElement('div'); d.id='dot-'+uid+'-'+i;
-    d.style.cssText='width:10px;height:10px;border-radius:50%;background:#2a2a5a;transition:.2s;';
+    d.style.cssText='width:10px;height:10px;border-radius:50%;background:#ECEBFB;transition:.2s;';
     bar.appendChild(d);
   }}
   function dot(i,c){{
     const d=document.getElementById('dot-'+uid+'-'+i); if(!d) return;
-    d.style.background = c==='active' ? '#a0a0ff' : c==='done' ? '#40c070' : '#2a2a5a';
+    d.style.background = c==='active' ? '#4F46E5' : c==='done' ? '#1FB888' : '#ECEBFB';
   }}
   function ensureAud(){{
     // Create ONE Audio element only inside a user-gesture handler.
@@ -405,7 +405,7 @@ def autoplaylist_html(audio_paths, pause_secs=1.0, uid="pl"):
     if(tmr){{clearTimeout(tmr); tmr=null;}}
     playing=false; cur=-1;
     document.getElementById('pl-btn-'+uid).textContent='▶ Play All';
-    document.getElementById('pl-btn-'+uid).style.color='#a0a0ff';
+    document.getElementById('pl-btn-'+uid).style.color='#4F46E5';
   }}
   function playIdx(i){{
     if(i>=n){{
@@ -429,7 +429,7 @@ def autoplaylist_html(audio_paths, pause_secs=1.0, uid="pl"):
     else{{
       ensureAud();  // must run during this user-gesture click
       document.getElementById('pl-btn-'+uid).textContent='■ Stop';
-      document.getElementById('pl-btn-'+uid).style.color='#ff6060';
+      document.getElementById('pl-btn-'+uid).style.color='#FF7B6B';
       playIdx(0);
     }}
   }};
@@ -448,24 +448,24 @@ def lessons_table(rows, active_idx=None, scores=None,
         score_html = ""
         if scores and i in scores:
             s = scores[i]
-            color = "#40c070" if s.get("passed") else "#c04040"
+            color = "var(--mova-mint)" if s.get("passed") else "var(--mova-coral-ink)"
             pct   = int(s.get("score", 0) * 100)
-            score_html = (f'<span style="background:{"#0d2e1a" if s.get("passed") else "#2e0d0d"};'
+            score_html = (f'<span style="background:{"var(--mova-mint-soft)" if s.get("passed") else "var(--mova-coral-soft)"};'
                           f'color:{color};border-radius:5px;padding:2px 9px;'
                           f'font-family:JetBrains Mono,monospace;font-size:.78rem">{pct}%</span>')
         style = ""
         if active_idx == i:
-            style = "background:#1e1e40;border-left:3px solid #6060d0;"
+            style = "background:var(--mova-indigo-soft);border-left:3px solid var(--mova-indigo);"
         html_rows += (
             f'<div class="row-ok" style="{style}">'
-            f'<span style="min-width:28px;color:#4040a0;font-family:JetBrains Mono,monospace;font-size:.75rem">{i+1:02d}</span>'
-            f'<span style="flex:1;color:#e0e0ff;font-size:1.05rem">{word}</span>'
-            f'<span style="flex:1;color:#a0a0ff;font-family:JetBrains Mono,monospace;font-size:.9rem">{trans}</span>'
+            f'<span style="min-width:28px;color:var(--mova-indigo-ink);font-family:JetBrains Mono,monospace;font-size:.75rem">{i+1:02d}</span>'
+            f'<span style="flex:1;color:var(--mova-ink);font-size:1.05rem">{word}</span>'
+            f'<span style="flex:1;color:var(--mova-indigo);font-family:JetBrains Mono,monospace;font-size:.9rem">{trans}</span>'
             f'{score_html}'
             f'</div>'
         )
     st.markdown(
-        f'<div style="background:#13131e;border:1px solid #222236;border-radius:12px;'
+        f'<div style="background:var(--mova-card);border:1px solid var(--mova-line-2);border-radius:12px;'
         f'overflow:hidden;margin:8px 0">{html_rows}</div>',
         unsafe_allow_html=True,
     )
@@ -516,7 +516,7 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 html,body,[class*="css"]{font-family:'Inter',sans-serif;}
-.stApp{background:#0d0d14;color:#e2e2f0;}
+/* removed: was fighting Mova surface; theme is now driven by tokens.css */
 #MainMenu,footer{visibility:hidden;}
 /* Keep Streamlit's sidebar collapse/expand control reachable on every device,
    including iOS Safari, where the control would otherwise be invisible. */
@@ -531,35 +531,35 @@ header [data-testid="stDecoration"]{display:none;}
     position:fixed !important;
     top:0.6rem !important;
     left:0.6rem !important;
-    background:#1a1a2e !important;
-    border:1px solid #5050b0 !important;
+    background:var(--mova-card) !important;
+    border:1px solid var(--mova-indigo) !important;
     border-radius:8px !important;
     box-shadow:0 2px 8px rgba(0,0,0,.4) !important;
 }
 [data-testid="collapsedControl"] button,
 [data-testid="collapsedControl"] svg{
-    color:#a0a0ff !important;
-    fill:#a0a0ff !important;
+    color:var(--mova-indigo) !important;
+    fill:var(--mova-indigo) !important;
     min-width:36px !important;
     min-height:36px !important;
 }
-.wcard{background:#13131e;border:1px solid #2a2a4a;border-radius:14px;padding:28px 20px;margin:10px 0;text-align:center;}
-.wbig{font-size:3.2rem;font-weight:700;color:#f0f0ff;}
-.tbig{font-size:2rem;color:#a0a0ff;font-family:'JetBrains Mono',monospace;margin-top:8px;}
-.rule{background:#1a1a2e;border-left:3px solid #5050b0;border-radius:6px;padding:10px 14px;margin:8px 0;color:#a0a0d0;font-size:.9rem;}
+.wcard{background:var(--mova-card);border:1px solid var(--mova-line);border-radius:14px;padding:28px 20px;margin:10px 0;text-align:center;}
+.wbig{font-size:3.2rem;font-weight:700;color:var(--mova-ink);}
+.tbig{font-size:2rem;color:var(--mova-indigo);font-family:'JetBrains Mono',monospace;margin-top:8px;}
+.rule{background:var(--mova-card);border-left:3px solid var(--mova-indigo);border-radius:6px;padding:10px 14px;margin:8px 0;color:#a0a0d0;font-size:.9rem;}
 .spill{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:3px 10px;border-radius:20px;margin:2px;display:inline-block;}
-.row-ok{display:flex;gap:10px;padding:8px 14px;background:#13131e;border-bottom:1px solid #1e1e30;align-items:center;}
+.row-ok{display:flex;gap:10px;padding:8px 14px;background:var(--mova-card);border-bottom:1px solid var(--mova-line);align-items:center;}
 /* Make Streamlit secondary buttons (e.g. step 3 choices) dark-themed for readability */
 .stApp .stButton > button[kind="secondary"]{
-    background:#1a1a2e !important;
-    color:#f0f0ff !important;
-    border:1px solid #2a2a4a !important;
+    background:var(--mova-card) !important;
+    color:var(--mova-ink) !important;
+    border:1px solid var(--mova-line) !important;
     font-weight:500 !important;
 }
 .stApp .stButton > button[kind="secondary"]:hover{
-    background:#262648 !important;
-    border-color:#5050b0 !important;
-    color:#ffffff !important;
+    background:var(--mova-indigo-soft) !important;
+    border-color:var(--mova-indigo) !important;
+    color:var(--mova-ink) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -583,27 +583,27 @@ def shdr(step: int):
     pills = ""
     for s in range(1, 6):
         if s == current_step():
-            style = "background:#2a2a5a;color:#a0a0ff;border:1px solid #5050b0"
+            style = "background:var(--mova-indigo-soft);color:var(--mova-indigo);border:1px solid var(--mova-indigo)"
         elif s < current_step():
-            style = "background:#0d2e1a;color:#40c070;border:1px solid #204030"
+            style = "background:var(--mova-mint-soft);color:var(--mova-mint);border:1px solid var(--mova-mint)"
         elif s in REQUIRED:
-            style = "background:#2e1a0d;color:#d08040;border:1px solid #704020"
+            style = "background:var(--mova-amber-soft);color:var(--mova-amber-ink);border:1px solid var(--mova-amber)"
         else:
-            style = "background:#1a1a2e;color:#5050a0;border:1px solid #2a2a3a"
+            style = "background:var(--mova-card);color:var(--mova-ink-3);border:1px solid var(--mova-line)"
         lbl = f"{'🔒' if s in REQUIRED and s > current_step() else s}"
         pills += f'<span class="spill" style="{style}">{lbl}</span>'
 
     req_note = ""
     if step in REQUIRED:
-        req_note = ' <span style="color:#d08040;font-size:.72rem">🔒 обов\'язковий</span>'
+        req_note = ' <span style="color:var(--mova-amber-ink);font-size:.72rem">🔒 обов\'язковий</span>'
 
     st.markdown(f'<div style="margin-bottom:10px">{pills}</div>', unsafe_allow_html=True)
     st.markdown(
-        f'<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);'
-        f'border:1px solid #2a2a4a;border-radius:14px;padding:14px 20px;margin-bottom:14px">'
-        f'<div style="color:#6060c0;font-size:.75rem;font-family:JetBrains Mono,monospace">'
+        f'<div style="background:var(--mova-card);'
+        f'border:1px solid var(--mova-line);border-radius:14px;padding:14px 20px;margin-bottom:14px">'
+        f'<div style="color:var(--mova-indigo);font-size:.75rem;font-family:JetBrains Mono,monospace">'
         f'КРОК {step} / 5{req_note}</div>'
-        f'<div style="color:#f0f0ff;font-size:1.15rem;font-weight:600">{STEPS[step]}</div>'
+        f'<div style="color:var(--mova-ink);font-size:1.15rem;font-weight:600">{STEPS[step]}</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -619,8 +619,8 @@ def card(word, trans, rule="", show_word=True, show_trans=True):
 def pbar(val: float):
     val = max(0.0, min(1.0, val))
     st.markdown(
-        f'<div style="background:#1a1a2e;border-radius:6px;height:6px;overflow:hidden;margin:6px 0">'
-        f'<div style="height:6px;background:linear-gradient(90deg,#4040c0,#6060ff);width:{val*100:.0f}%"></div></div>',
+        f'<div style="background:var(--mova-card);border-radius:6px;height:6px;overflow:hidden;margin:6px 0">'
+        f'<div style="height:6px;background:linear-gradient(90deg, var(--mova-indigo), #6E66FF);width:{val*100:.0f}%"></div></div>',
         unsafe_allow_html=True,
     )
 
@@ -693,7 +693,7 @@ def do_step2(rows: pd.DataFrame) -> bool:
                     # Mark every row with the same overall score (whole-recording match)
                     scores = {i: r for i in range(len(rows))}
                     st.session_state["s2_scores"] = scores
-                    color = "#40c070" if r["passed"] else "#c04040"
+                    color = "var(--mova-mint)" if r["passed"] else "var(--mova-coral-ink)"
                     st.markdown(
                         f'<div style="text-align:center;font-size:1.6rem;'
                         f'color:{color};font-weight:600">{int(r["score"]*100)}%</div>',
@@ -743,8 +743,8 @@ def do_step3(rows: pd.DataFrame) -> bool:
     if scores:
         html = "".join(
             f'<div class="row-ok">'
-            f'<span style="color:{"#40c070" if v else "#c04040"};flex:1">{"✓" if v else "✗"} {rows.iloc[i]["word"]}</span>'
-            f'<span style="color:#6060a0;font-family:JetBrains Mono,monospace;font-size:.78rem">{rows.iloc[i]["transcription"]}</span>'
+            f'<span style="color:{"var(--mova-mint)" if v else "var(--mova-coral-ink)"};flex:1">{"✓" if v else "✗"} {rows.iloc[i]["word"]}</span>'
+            f'<span style="color:var(--mova-ink-3);font-family:JetBrains Mono,monospace;font-size:.78rem">{rows.iloc[i]["transcription"]}</span>'
             f'</div>'
             for i, v in sorted(scores.items())
         )
@@ -836,17 +836,17 @@ def do_step5(rows: pd.DataFrame) -> bool:
 
     # Show all words as grid
     chips = "".join(
-        f'<span style="font-size:1.3rem;font-weight:600;color:#e0e0ff;'
-        f'background:#13131e;border:1px solid #2a2a4a;border-radius:10px;'
+        f'<span style="font-size:1.3rem;font-weight:600;color:var(--mova-ink);'
+        f'background:var(--mova-card);border:1px solid var(--mova-line);border-radius:10px;'
         f'padding:10px 16px;margin:4px;display:inline-block">'
         f'{row["word"]}'
-        f'<span style="display:block;font-size:.75rem;color:#6060a0;'
+        f'<span style="display:block;font-size:.75rem;color:var(--mova-ink-3);'
         f'font-family:JetBrains Mono,monospace">{row["transcription"]}</span></span>'
         for _, row in rows.iterrows()
     )
     st.markdown(
         f'<div style="display:flex;flex-wrap:wrap;gap:6px;padding:16px;'
-        f'background:#0d0d14;border-radius:12px">{chips}</div>',
+        f'background:var(--mova-surface);border-radius:12px">{chips}</div>',
         unsafe_allow_html=True,
     )
 
@@ -930,8 +930,8 @@ def render_setup(df: pd.DataFrame):
     st.markdown("""
     <div style="text-align:center;padding:36px 0 20px">
       <div style="font-size:3rem">📖</div>
-      <h1 style="color:#f0f0ff;font-weight:600;margin:10px 0 4px">Reading Practice</h1>
-      <p style="color:#606090">English Phonics · 80 уроків · IPA озвучка</p>
+      <h1 style="color:var(--mova-ink);font-weight:600;margin:10px 0 4px">Reading Practice</h1>
+      <p style="color:var(--mova-ink-3)">English Phonics · 80 уроків · IPA озвучка</p>
     </div>""", unsafe_allow_html=True)
 
     if not _edge_ok() and not _gtts_ok():
@@ -982,12 +982,12 @@ def render_setup(df: pd.DataFrame):
 
     st.markdown(f"**{len(rows)} слів/рядків у цьому уроці:**")
     preview = "".join(
-        '<div style="display:flex;gap:14px;padding:8px 14px;background:#13131e;'
-        'border-bottom:1px solid #1e1e30;align-items:center">'
-        f'<span style="min-width:24px;color:#4040a0;font-family:JetBrains Mono,monospace;font-size:.75rem">{i+1:02d}</span>'
-        f'<span style="flex:1;font-size:1rem;color:#e0e0ff">{row["word"]}</span>'
-        f'<span style="color:#a0a0ff;font-family:JetBrains Mono,monospace;font-size:.85rem">{row["transcription"]}</span>'
-        + ('<span style="color:#5050a0;font-size:.75rem;margin-left:8px">'
+        '<div style="display:flex;gap:14px;padding:8px 14px;background:var(--mova-card);'
+        'border-bottom:1px solid var(--mova-line);align-items:center">'
+        f'<span style="min-width:24px;color:var(--mova-indigo-ink);font-family:JetBrains Mono,monospace;font-size:.75rem">{i+1:02d}</span>'
+        f'<span style="flex:1;font-size:1rem;color:var(--mova-ink)">{row["word"]}</span>'
+        f'<span style="color:var(--mova-indigo);font-family:JetBrains Mono,monospace;font-size:.85rem">{row["transcription"]}</span>'
+        + ('<span style="color:var(--mova-ink-3);font-size:.75rem;margin-left:8px">'
            + row["rule"][:40] + '...</span>' if len(row["rule"]) > 5 else '')
         + '</div>'
         for i, (_, row) in enumerate(rows.iterrows())
@@ -1025,7 +1025,7 @@ def _inject_css():
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 html,body,[class*="css"]{font-family:'Inter',sans-serif;}
-.stApp{background:#0d0d14;color:#e2e2f0;}
+/* removed: was fighting Mova surface; theme is now driven by tokens.css */
 #MainMenu,footer{visibility:hidden;}
 /* Keep Streamlit's sidebar collapse/expand control reachable on every device,
    including iOS Safari, where the control would otherwise be invisible. */
@@ -1040,35 +1040,35 @@ header [data-testid="stDecoration"]{display:none;}
     position:fixed !important;
     top:0.6rem !important;
     left:0.6rem !important;
-    background:#1a1a2e !important;
-    border:1px solid #5050b0 !important;
+    background:var(--mova-card) !important;
+    border:1px solid var(--mova-indigo) !important;
     border-radius:8px !important;
     box-shadow:0 2px 8px rgba(0,0,0,.4) !important;
 }
 [data-testid="collapsedControl"] button,
 [data-testid="collapsedControl"] svg{
-    color:#a0a0ff !important;
-    fill:#a0a0ff !important;
+    color:var(--mova-indigo) !important;
+    fill:var(--mova-indigo) !important;
     min-width:36px !important;
     min-height:36px !important;
 }
-.wcard{background:#13131e;border:1px solid #2a2a4a;border-radius:14px;padding:28px 20px;margin:10px 0;text-align:center;}
-.wbig{font-size:3.2rem;font-weight:700;color:#f0f0ff;}
-.tbig{font-size:2rem;color:#a0a0ff;font-family:'JetBrains Mono',monospace;margin-top:8px;}
-.rule{background:#1a1a2e;border-left:3px solid #5050b0;border-radius:6px;padding:10px 14px;margin:8px 0;color:#a0a0d0;font-size:.9rem;}
+.wcard{background:var(--mova-card);border:1px solid var(--mova-line);border-radius:14px;padding:28px 20px;margin:10px 0;text-align:center;}
+.wbig{font-size:3.2rem;font-weight:700;color:var(--mova-ink);}
+.tbig{font-size:2rem;color:var(--mova-indigo);font-family:'JetBrains Mono',monospace;margin-top:8px;}
+.rule{background:var(--mova-card);border-left:3px solid var(--mova-indigo);border-radius:6px;padding:10px 14px;margin:8px 0;color:#a0a0d0;font-size:.9rem;}
 .spill{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:3px 10px;border-radius:20px;margin:2px;display:inline-block;}
-.row-ok{display:flex;gap:10px;padding:8px 14px;background:#13131e;border-bottom:1px solid #1e1e30;align-items:center;}
+.row-ok{display:flex;gap:10px;padding:8px 14px;background:var(--mova-card);border-bottom:1px solid var(--mova-line);align-items:center;}
 /* Make Streamlit secondary buttons (e.g. step 3 choices) dark-themed for readability */
 .stApp .stButton > button[kind="secondary"]{
-    background:#1a1a2e !important;
-    color:#f0f0ff !important;
-    border:1px solid #2a2a4a !important;
+    background:var(--mova-card) !important;
+    color:var(--mova-ink) !important;
+    border:1px solid var(--mova-line) !important;
     font-weight:500 !important;
 }
 .stApp .stButton > button[kind="secondary"]:hover{
-    background:#262648 !important;
-    border-color:#5050b0 !important;
-    color:#ffffff !important;
+    background:var(--mova-indigo-soft) !important;
+    border-color:var(--mova-indigo) !important;
+    color:var(--mova-ink) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1110,21 +1110,21 @@ def main():
         pct       = round(completed / total * 100, 1)
 
         st.markdown(
-            f'<div style="background:#13131e;border:1px solid #2a2a4a;'
+            f'<div style="background:var(--mova-card);border:1px solid var(--mova-line);'
             f'border-radius:10px;padding:10px 12px;margin:4px 0 10px">'
-            f'<div style="color:#8080a0;font-size:.7rem;'
+            f'<div style="color:var(--mova-ink-2);font-size:.7rem;'
             f'font-family:\'JetBrains Mono\',monospace;'
             f'text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">'
             f'Твій шлях · Reading</div>'
-            f'<div style="color:#f0f0ff;font-size:1.05rem;font-weight:600">'
+            f'<div style="color:var(--mova-ink);font-size:1.05rem;font-weight:600">'
             f'Урок {lid} / {total}</div>'
             f'<div style="display:flex;justify-content:space-between;'
             f'font-family:\'JetBrains Mono\',monospace;font-size:.72rem;'
-            f'color:#5050a0;margin:6px 0 2px">'
+            f'color:var(--mova-ink-3);margin:6px 0 2px">'
             f'<span>{completed} пройдено · {total - completed} попереду</span>'
             f'<span>{pct}%</span></div>'
-            f'<div style="background:#1a1a2e;border-radius:6px;height:6px;overflow:hidden">'
-            f'<div style="height:6px;background:linear-gradient(90deg,#4040c0,#6060ff);'
+            f'<div style="background:var(--mova-card);border-radius:6px;height:6px;overflow:hidden">'
+            f'<div style="height:6px;background:linear-gradient(90deg, var(--mova-indigo), #6E66FF);'
             f'width:{pct}%"></div></div>'
             f'</div>',
             unsafe_allow_html=True,
@@ -1135,11 +1135,11 @@ def main():
         st.markdown(
             f'<div style="display:flex;justify-content:space-between;'
             f'font-family:\'JetBrains Mono\',monospace;font-size:.72rem;'
-            f'color:#5050a0;margin-bottom:2px">'
+            f'color:var(--mova-ink-3);margin-bottom:2px">'
             f'<span>Крок {step} / 5 — {STEPS.get(step,"")}</span>'
             f'<span>{"🔒" if step in REQUIRED else ""}</span></div>'
-            f'<div style="background:#1a1a2e;border-radius:6px;height:6px;overflow:hidden">'
-            f'<div style="height:6px;background:linear-gradient(90deg,#205040,#40c070);'
+            f'<div style="background:var(--mova-card);border-radius:6px;height:6px;overflow:hidden">'
+            f'<div style="height:6px;background:linear-gradient(90deg, var(--mova-mint), #34D0A0);'
             f'width:{step_pct}%"></div></div>',
             unsafe_allow_html=True,
         )
@@ -1200,10 +1200,10 @@ def main():
                 print(f"[reading_app] save_progress failed: {e}")
 
         st.markdown("""
-        <div style="background:linear-gradient(135deg,#0d2e1a,#1a1a2e);
-             border:1px solid #304030;border-radius:16px;padding:40px;text-align:center">
+        <div style="background:linear-gradient(135deg, var(--mova-mint-soft), var(--mova-indigo-soft));
+             border:1px solid var(--mova-mint);border-radius:16px;padding:40px;text-align:center">
           <div style="font-size:3rem">🎉</div>
-          <h2 style="color:#f0f0ff">Урок завершено!</h2>
+          <h2 style="color:var(--mova-ink)">Урок завершено!</h2>
         </div>""", unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         with c1:

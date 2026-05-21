@@ -1,0 +1,140 @@
+/* ============================================================
+   mova. — design tokens
+   Drop this file into your Streamlit project (e.g. /static/tokens.css)
+   and load it from streamlit_extras.stylable_container or via a
+   <link> injected with st.markdown(..., unsafe_allow_html=True).
+   ============================================================ */
+
+:root {
+  /* ---------- Brand palette ---------- */
+  --mova-surface:        #FAF7F5;   /* page background */
+  --mova-surface-2:      #F4F0EB;   /* recessed surface (chip rail, table stripe) */
+  --mova-surface-3:      #ECE6DE;   /* hover/pressed on surface */
+  --mova-card:           #FFFFFF;   /* card fill */
+  --mova-ink:            #1B1730;   /* primary text */
+  --mova-ink-2:          #4B4564;   /* secondary text */
+  --mova-ink-3:          #7A7390;   /* tertiary text / placeholder */
+  --mova-ink-4:          #B7B0C4;   /* disabled / divider-on-card */
+  --mova-line:           #E8E2D8;   /* hairline on surface */
+  --mova-line-2:         #DDD6CA;   /* hairline emphasis */
+
+  --mova-indigo:         #4F46E5;   /* navigation, links, focus */
+  --mova-indigo-ink:     #2E27A8;   /* indigo text on light bg */
+  --mova-indigo-soft:    #ECEBFB;   /* indigo background tint */
+
+  --mova-coral:          #FF7B6B;   /* PRIMARY CTA only */
+  --mova-coral-press:    #E86553;
+  --mova-coral-ink:      #B23D2D;
+  --mova-coral-soft:     #FFE7E2;
+
+  --mova-mint:           #1FB888;   /* success, "saved", correct */
+  --mova-mint-ink:       #0E6E50;
+  --mova-mint-soft:      #DDF4EA;
+
+  --mova-amber:          #F4B740;   /* warning, streak, attention */
+  --mova-amber-ink:      #8A5A0A;
+  --mova-amber-soft:     #FBEDCC;
+
+  /* ---------- Radius scale (NOT iOS-pill) ---------- */
+  --mova-radius-1:  4px;   /* chips, badges */
+  --mova-radius-2:  6px;   /* buttons, inputs (matches Streamlit defaults) */
+  --mova-radius-3:  10px;  /* small cards, tiles */
+  --mova-radius-4:  14px;  /* large cards, banners */
+  --mova-radius-5:  20px;  /* hero / icon tile */
+  --mova-radius-full: 999px;
+
+  /* ---------- Shadow scale ---------- */
+  --mova-shadow-1: 0 1px 0 rgba(27, 23, 48, 0.04), 0 1px 2px rgba(27, 23, 48, 0.04);
+  --mova-shadow-2: 0 2px 4px rgba(27, 23, 48, 0.05), 0 4px 12px rgba(27, 23, 48, 0.06);
+  --mova-shadow-3: 0 4px 12px rgba(27, 23, 48, 0.08), 0 12px 32px rgba(27, 23, 48, 0.08);
+  --mova-shadow-focus: 0 0 0 3px rgba(79, 70, 229, 0.25);
+  --mova-shadow-coral-focus: 0 0 0 3px rgba(255, 123, 107, 0.30);
+
+  /* ---------- Spacing scale (4-pt) ---------- */
+  --mova-sp-1:  4px;
+  --mova-sp-2:  8px;
+  --mova-sp-3:  12px;
+  --mova-sp-4:  16px;
+  --mova-sp-5:  20px;
+  --mova-sp-6:  24px;
+  --mova-sp-7:  32px;
+  --mova-sp-8:  40px;
+  --mova-sp-9:  56px;
+  --mova-sp-10: 72px;
+
+  /* ---------- Type ---------- */
+  --mova-font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mova-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Type scale — mobile baseline, scales up via clamp() at desktop */
+  --mova-fs-display: clamp(34px, 4.5vw, 44px);  /* hero "mova." */
+  --mova-fs-h1:      clamp(26px, 3.2vw, 32px);  /* screen title */
+  --mova-fs-h2:      clamp(20px, 2.4vw, 24px);  /* section header */
+  --mova-fs-h3:      18px;                       /* card title */
+  --mova-fs-body:    15px;                       /* body */
+  --mova-fs-small:   13px;                       /* caption */
+  --mova-fs-micro:   11px;                       /* uppercase label */
+
+  --mova-fw-regular: 400;
+  --mova-fw-medium:  500;
+  --mova-fw-semi:    600;
+  --mova-fw-bold:    700;
+  --mova-fw-black:   800;
+
+  --mova-lh-tight:   1.15;
+  --mova-lh-snug:    1.30;
+  --mova-lh-body:    1.50;
+
+  --mova-tracking-display: -0.03em;
+  --mova-tracking-tight:   -0.01em;
+  --mova-tracking-label:    0.08em;
+
+  /* ---------- Motion ---------- */
+  --mova-ease:     cubic-bezier(.2, .8, .2, 1);
+  --mova-dur-1:    120ms;
+  --mova-dur-2:    200ms;
+  --mova-dur-3:    320ms;
+
+  /* ---------- Layout ---------- */
+  --mova-container-max: 720px;   /* main column max width on desktop */
+  --mova-sidebar-w:     264px;   /* left nav, matches Streamlit's default */
+
+  /* ---------- Exercise palette (eight steps) ---------- */
+  --mova-step-1-from: #FF8A7A; --mova-step-1-to: #FF6A5A; /* Read */
+  --mova-step-2-from: #6E8BFF; --mova-step-2-to: #4F46E5; /* Listen & Repeat */
+  --mova-step-3-from: #34D0A0; --mova-step-3-to: #1FB888; /* Listen & Match */
+  --mova-step-4-from: #FFC966; --mova-step-4-to: #F4B740; /* Speed Read */
+  --mova-step-5-from: #B58CFF; --mova-step-5-to: #8A5CFF; /* Shadow */
+  --mova-step-6-from: #FFA487; --mova-step-6-to: #FF7B6B; /* Active Translate */
+  --mova-step-7-from: #FFD37A; --mova-step-7-to: #F4B740; /* Speed Translate */
+  --mova-step-8-from: #7BC8FF; --mova-step-8-to: #3D8DE0; /* Create */
+}
+
+/* ============================================================
+   Dark theme — used on 00-brand hero panel and 22-results.
+   Attach with <body data-theme="dark"> or [data-theme="dark"]
+   container. Streamlit's own .stApp can be flipped from the
+   theme.toml; these tokens shadow over it.
+   ============================================================ */
+
+[data-theme="dark"] {
+  --mova-surface:   #15121E;
+  --mova-surface-2: #1E1A2B;
+  --mova-surface-3: #2A2540;
+  --mova-card:      #1E1A2B;
+  --mova-ink:       #F6F2EC;
+  --mova-ink-2:     #C8C0D6;
+  --mova-ink-3:     #948CA6;
+  --mova-ink-4:     #5F5775;
+  --mova-line:      #2C2740;
+  --mova-line-2:    #3A3450;
+
+  --mova-indigo-soft: #1F1B3A;
+  --mova-coral-soft:  #3A1C1A;
+  --mova-mint-soft:   #102E26;
+  --mova-amber-soft:  #2F2410;
+
+  --mova-shadow-1: 0 1px 0 rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+  --mova-shadow-2: 0 2px 8px rgba(0,0,0,.4);
+  --mova-shadow-3: 0 8px 24px rgba(0,0,0,.5);
+}

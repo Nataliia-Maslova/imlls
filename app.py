@@ -50,6 +50,66 @@ from engine.vocab_loader import (             # noqa: E402
 from engine.custom_store import list_user_lessons  # noqa: E402
 from engine.logger import get_progress        # noqa: E402
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Mova design system — Phase 1 integration
+# ═══════════════════════════════════════════════════════════════════════════
+MOVA_DIR = ROOT / "static" / "mova"
+
+# Phase 1 CSS overrides on top of the three Mova files.
+# - Relax container max-width so existing wide tables still fit (Mova default
+#   is 720px which is too narrow for our two-column phrase tables).
+# - Preserve a small no-op so future tweaks have a place to live.
+_MOVA_LOCAL_OVERRIDES = """
+:root { --mova-container-max: 1000px; }
+"""
+
+
+@st.cache_data(show_spinner=False)
+def _read_mova_css() -> str:
+    """Return the concatenated Mova CSS (tokens → overrides → components).
+    Cached so the file system is hit only once per session.
+
+    Sanitises the CSS so any literal `<style>` / `</style>` / `<\\/style>`
+    sequences inside comments can't break out of our <style> block (this is
+    a real risk — streamlit-overrides.css ships with a demo snippet in its
+    own header comment that contains exactly these tokens).
+    """
+    parts = []
+    for name in ("tokens.css", "streamlit-overrides.css", "components.css"):
+        path = MOVA_DIR / name
+        if path.exists():
+            parts.append(f"/* ===== {name} ===== */\n{path.read_text(encoding='utf-8')}")
+    parts.append(f"/* ===== local overrides ===== */{_MOVA_LOCAL_OVERRIDES}")
+    css = "\n\n".join(parts)
+    # Strip patterns that could prematurely close our <style> block when
+    # Streamlit's markdown renderer pipes the string through markdown-it.
+    css = (css.replace("</style>", "/* */")
+              .replace("<\\/style>", "/* */")
+              .replace("<style>", "/* */"))
+    return css
+
+
+def _inject_mova_css() -> None:
+    """Inject the Mova design system: Google Fonts + 3 CSS files + local tweaks.
+
+    Loaded on every page render. Sits on top of the sub-apps' existing CSS so
+    Mova rules win via CSS cascade (and `!important` where present).
+
+    Uses `@import` instead of <link> tags because Streamlit's markdown
+    parser treats <link> as inline text in some versions.
+    """
+    if not MOVA_DIR.exists():
+        return
+    css = _read_mova_css()
+    st.markdown(
+        f"""<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+{css}
+</style>""",
+        unsafe_allow_html=True,
+    )
+
 LANGUAGES = ["English", "Ukrainian", "Spanish", "Korean"]
 
 DB_GRAMMAR  = ROOT / "data" / "imlls_database.xlsx"
@@ -62,29 +122,29 @@ MODULES = {
         "label":       "Grammar",
         "icon":        "🗣️",
         "tagline":     "Practice phrases - 8 steps with GEC correction",
-        "color_from":  "#16213e",
-        "color_to":    "#1a1a2e",
+        "color_from":  "var(--mova-card)",
+        "color_to":    "var(--mova-card)",
     },
     "vocab": {
         "label":       "Vocabulary",
         "icon":        "📖",
         "tagline":     "Learn words by topic - Family, Food, Travel...",
-        "color_from":  "#1a2e16",
-        "color_to":    "#1a2e1a",
+        "color_from":  "var(--mova-card)",
+        "color_to":    "var(--mova-card)",
     },
     "reading": {
         "label":       "Reading",
         "icon":        "🔤",
         "tagline":     "English phonics - 80 lessons with IPA audio",
-        "color_from":  "#2e1a16",
-        "color_to":    "#2e1a1a",
+        "color_from":  "var(--mova-card)",
+        "color_to":    "var(--mova-card)",
     },
     "custom": {
         "label":       "My Phrases",
         "icon":        "📝",
         "tagline":     "Create your own lessons - same 8-step practice flow",
-        "color_from":  "#2e162e",
-        "color_to":    "#1a1a2e",
+        "color_from":  "var(--mova-card)",
+        "color_to":    "var(--mova-card)",
     },
 }
 
@@ -199,7 +259,7 @@ def _module_progress_card(module_key: str, native: str, target: str,
 def render_launcher():
     st.markdown("""
     <style>
-    .stApp{background:#0d0d14;color:#e2e2f0;}
+    /* removed: was fighting Mova surface; theme is now driven by tokens.css */
     #MainMenu,footer{visibility:hidden;}
     /* Keep Streamlit's sidebar collapse/expand control reachable on every device,
        including iOS Safari, where the control would otherwise be invisible. */
@@ -214,21 +274,21 @@ def render_launcher():
         position:fixed !important;
         top:0.6rem !important;
         left:0.6rem !important;
-        background:#1a1a2e !important;
-        border:1px solid #5050b0 !important;
+        background:var(--mova-card) !important;
+        border:1px solid var(--mova-indigo) !important;
         border-radius:8px !important;
         box-shadow:0 2px 8px rgba(0,0,0,.4) !important;
     }
     [data-testid="collapsedControl"] button,
     [data-testid="collapsedControl"] svg{
-        color:#a0a0ff !important;
-        fill:#a0a0ff !important;
+        color:var(--mova-indigo) !important;
+        fill:var(--mova-indigo) !important;
         min-width:36px !important;
         min-height:36px !important;
     }
     .mode-card{
-        background:linear-gradient(135deg,#1a1a2e,#16213e);
-        border:1px solid #2a2a4a;
+        background:var(--mova-card);
+        border:1px solid var(--mova-line);
         border-radius:18px;
         padding:28px 22px 22px;
         text-align:center;
@@ -236,22 +296,22 @@ def render_launcher():
         height:100%;
     }
     .mode-card:hover{
-        border-color:#5050b0;
-        background:linear-gradient(135deg,#1e1e36,#1a253f);
+        border-color:var(--mova-indigo);
+        background:var(--mova-surface-3);
     }
     .mode-icon{font-size:3rem;margin-bottom:6px;}
-    .mode-title{color:#f0f0ff;font-size:1.4rem;font-weight:600;margin:6px 0;}
-    .mode-tag{color:#8080a0;font-size:.88rem;margin-bottom:14px;}
-    .pb-wrap{background:#11111c;border-radius:8px;height:8px;margin:8px 0 6px;
-             overflow:hidden;border:1px solid #1e1e30;}
+    .mode-title{color:var(--mova-ink);font-size:1.4rem;font-weight:600;margin:6px 0;}
+    .mode-tag{color:var(--mova-ink-2);font-size:.88rem;margin-bottom:14px;}
+    .pb-wrap{background:var(--mova-surface-3);border-radius:8px;height:8px;margin:8px 0 6px;
+             overflow:hidden;border:1px solid var(--mova-line);}
     .pb-fill{height:8px;border-radius:8px;
-             background:linear-gradient(90deg,#4040c0,#6060ff);transition:width .4s;}
+             background:linear-gradient(90deg, var(--mova-indigo), #6E66FF);transition:width .4s;}
     .pb-info{display:flex;justify-content:space-between;
              font-family:'JetBrains Mono',monospace;font-size:.72rem;
              color:#9090c0;margin-bottom:2px;}
-    .pb-done{color:#40c070 !important;}
-    .pb-fill-done{background:linear-gradient(90deg,#206040,#40c070) !important;}
-    .pb-empty{color:#5050a0 !important;}
+    .pb-done{color:var(--mova-mint) !important;}
+    .pb-fill-done{background:linear-gradient(90deg,var(--mova-mint),var(--mova-mint)) !important;}
+    .pb-empty{color:var(--mova-ink-3) !important;}
     .menu-wrap{max-width:920px;margin:0 auto;}
     </style>
     """, unsafe_allow_html=True)
@@ -259,11 +319,11 @@ def render_launcher():
     st.markdown("""
     <div style="text-align:center;padding:40px 0 20px">
       <div style="font-size:3.5rem">🎓</div>
-      <h1 style="color:#f0f0ff;font-weight:600;margin:10px 0 4px">IMLLS</h1>
-      <p style="color:#606090;font-size:1rem">
+      <h1 style="color:var(--mova-ink);font-weight:600;margin:10px 0 4px">IMLLS</h1>
+      <p style="color:var(--mova-ink-3);font-size:1rem">
         Intelligent Multilingual Language Learning System
       </p>
-      <p style="color:#a0a0a0;margin-top:14px">
+      <p style="color:var(--mova-ink-3);margin-top:14px">
         Choose what you want to practice today:
       </p>
     </div>
@@ -368,6 +428,10 @@ def _switch_to(module_key: str):
 # Main router
 # ═══════════════════════════════════════════════════════════════════════════
 def main():
+    # Mova design system — Phase 1. Loaded on every rerun so it overrides
+    # the sub-apps' legacy CSS via cascade.
+    _inject_mova_css()
+
     # Sub-apps may set this flag in their sidebar "Switch mode" button.
     if st.session_state.pop("_show_launcher", False):
         # Preserve launcher preferences across the reset

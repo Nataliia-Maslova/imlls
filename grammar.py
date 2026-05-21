@@ -103,7 +103,7 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 html,body,[class*="css"]{font-family:'Inter',sans-serif;}
-.stApp{background:#0d0d14;color:#e2e2f0;}
+/* removed: was fighting Mova surface; theme is now driven by tokens.css */
 #MainMenu,footer{visibility:hidden;}
 /* Keep Streamlit's sidebar collapse/expand control reachable on every device,
    including iOS Safari, where the control would otherwise be invisible. */
@@ -118,41 +118,41 @@ header [data-testid="stDecoration"]{display:none;}
     position:fixed !important;
     top:0.6rem !important;
     left:0.6rem !important;
-    background:#1a1a2e !important;
-    border:1px solid #5050b0 !important;
+    background:var(--mova-card) !important;
+    border:1px solid var(--mova-indigo) !important;
     border-radius:8px !important;
     box-shadow:0 2px 8px rgba(0,0,0,.4) !important;
 }
 [data-testid="collapsedControl"] button,
 [data-testid="collapsedControl"] svg{
-    color:#a0a0ff !important;
-    fill:#a0a0ff !important;
+    color:var(--mova-indigo) !important;
+    fill:var(--mova-indigo) !important;
     min-width:36px !important;
     min-height:36px !important;
 }
 
-.step-header{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #2a2a4a;border-radius:14px;padding:18px 26px;margin-bottom:18px;}
-.step-num{font-family:'JetBrains Mono',monospace;color:#6060c0;font-size:.78rem;margin-bottom:4px;}
-.step-title{color:#f0f0ff;font-size:1.25rem;font-weight:600;}
-.step-desc{color:#8080a0;font-size:.88rem;margin-top:5px;}
+.step-header{background:var(--mova-card);border:1px solid var(--mova-line);border-radius:14px;padding:18px 26px;margin-bottom:18px;}
+.step-num{font-family:'JetBrains Mono',monospace;color:var(--mova-indigo);font-size:.78rem;margin-bottom:4px;}
+.step-title{color:var(--mova-ink);font-size:1.25rem;font-weight:600;}
+.step-desc{color:var(--mova-ink-2);font-size:.88rem;margin-top:5px;}
 .step-pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
-.pill{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:3px 9px;border-radius:20px;background:#1a1a2e;color:#5050a0;border:1px solid #2a2a3a;}
-.pill-active{background:#2a2a5a;color:#a0a0ff;border-color:#5050b0;}
-.pill-done{background:#0d2e1a;color:#40c070;border-color:#204030;}
+.pill{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:3px 9px;border-radius:20px;background:var(--mova-card);color:var(--mova-ink-3);border:1px solid var(--mova-line);}
+.pill-active{background:var(--mova-indigo-soft);color:var(--mova-indigo);border-color:var(--mova-indigo);}
+.pill-done{background:var(--mova-mint-soft);color:var(--mova-mint);border-color:var(--mova-mint);}
 
-.ptable{background:#13131e;border:1px solid #222236;border-radius:12px;overflow:hidden;margin:10px 0;}
-.prow{display:flex;align-items:center;padding:11px 18px;border-bottom:1px solid #1e1e30;gap:14px;}
+.ptable{background:var(--mova-card);border:1px solid var(--mova-line-2);border-radius:12px;overflow:hidden;margin:10px 0;}
+.prow{display:flex;align-items:center;padding:11px 18px;border-bottom:1px solid var(--mova-line);gap:14px;}
 .prow:last-child{border-bottom:none;}
-.prow:hover{background:#1a1a2a;}
-.pnum{font-family:'JetBrains Mono',monospace;color:#6060d0;font-size:.78rem;min-width:26px;}
-.pnat{color:#c8c8e8;flex:1;font-size:.98rem;}
-.ptgt{color:#ffffff;flex:1;font-size:.98rem;font-weight:500;}
-.phide{color:#404060;flex:1;font-style:italic;font-size:.85rem;}
-.spass{background:#0d2e1a;color:#40c070;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
-.sfail{background:#2e0d0d;color:#c04040;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
+.prow:hover{background:var(--mova-surface-3);}
+.pnum{font-family:'JetBrains Mono',monospace;color:var(--mova-indigo);font-size:.78rem;min-width:26px;}
+.pnat{color:var(--mova-ink);flex:1;font-size:.98rem;}
+.ptgt{color:var(--mova-ink);flex:1;font-size:.98rem;font-weight:500;}
+.phide{color:var(--mova-ink-4);flex:1;font-style:italic;font-size:.85rem;}
+.spass{background:var(--mova-mint-soft);color:var(--mova-mint);border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
+.sfail{background:var(--mova-coral-soft);color:var(--mova-coral-ink);border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
 
 /* Color-coded step type — left border tells the user what kind of step it is */
-.step-header.step-type-reading     { border-left: 4px solid #5060c0; }
+.step-header.step-type-reading     { border-left: 4px solid var(--mova-indigo); }
 .step-header.step-type-listening   { border-left: 4px solid #8050b0; }
 .step-header.step-type-matching    { border-left: 4px solid #40a0a0; }
 .step-header.step-type-translation { border-left: 4px solid #40a060; }
@@ -174,26 +174,26 @@ header [data-testid="stDecoration"]{display:none;}
 
 /* Step 3 — make choice buttons readable (dark theme instead of light) */
 .stApp .stButton > button[kind="secondary"]{
-    background:#1a1a2e !important;
-    color:#f0f0ff !important;
-    border:1px solid #2a2a4a !important;
+    background:var(--mova-card) !important;
+    color:var(--mova-ink) !important;
+    border:1px solid var(--mova-line) !important;
     font-weight:500 !important;
 }
 .stApp .stButton > button[kind="secondary"]:hover{
-    background:#262648 !important;
-    border-color:#5050b0 !important;
-    color:#ffffff !important;
+    background:var(--mova-indigo-soft) !important;
+    border-color:var(--mova-indigo) !important;
+    color:var(--mova-ink) !important;
 }
 
-.timer{font-family:'JetBrains Mono',monospace;font-size:2.4rem;color:#a0a0ff;text-align:center;padding:14px;background:#13131e;border-radius:12px;border:1px solid #2a2a4a;margin:10px 0;}
-.prow-active{background:#1e1e40 !important;border-left:3px solid #6060d0;}
-.prow-active .pnat{color:#c0c0ff !important;}
-.prow-active .ptgt{color:#ffffff !important;font-weight:600;}
-.pill-required{background:#2e1a0d;color:#d08040;border-color:#704020;}
-.progress-bar-wrap{background:#1a1a2e;border-radius:8px;height:8px;margin:6px 0;overflow:hidden;}
-.progress-bar-fill{height:8px;border-radius:8px;background:linear-gradient(90deg,#4040c0,#6060ff);transition:width .4s;}
-.progress-info{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#5050a0;margin-bottom:2px;}
-.cbanner{background:linear-gradient(135deg,#0d2e1a,#1a1a2e);border:1px solid #304030;border-radius:16px;padding:36px;text-align:center;}
+.timer{font-family:'JetBrains Mono',monospace;font-size:2.4rem;color:var(--mova-indigo);text-align:center;padding:14px;background:var(--mova-card);border-radius:12px;border:1px solid var(--mova-line);margin:10px 0;}
+.prow-active{background:var(--mova-indigo-soft) !important;border-left:3px solid var(--mova-indigo);}
+.prow-active .pnat{color:var(--mova-ink) !important;}
+.prow-active .ptgt{color:var(--mova-ink) !important;font-weight:600;}
+.pill-required{background:var(--mova-amber-soft);color:var(--mova-amber-ink);border-color:var(--mova-amber);}
+.progress-bar-wrap{background:var(--mova-card);border-radius:8px;height:8px;margin:6px 0;overflow:hidden;}
+.progress-bar-fill{height:8px;border-radius:8px;background:linear-gradient(90deg, var(--mova-indigo), #6E66FF);transition:width .4s;}
+.progress-info{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--mova-ink-3);margin-bottom:2px;}
+.cbanner{background:linear-gradient(135deg, var(--mova-mint-soft), var(--mova-indigo-soft));border:1px solid var(--mova-mint);border-radius:16px;padding:36px;text-align:center;}
 audio{width:100%;border-radius:8px;margin:4px 0;}
 </style>
 """, unsafe_allow_html=True)
@@ -238,14 +238,14 @@ def autoplaylist_html(audio_paths, pause_secs):
     pauses_js = str([round(s, 2) for s in pause_secs])
     n = len(srcs)
     return f"""
-<div style="background:#13131e;border:1px solid #2a2a4a;border-radius:12px;padding:14px 18px;margin:8px 0;">
+<div style="background:#FFFFFF;border:1px solid #E8E2D8;border-radius:12px;padding:14px 18px;margin:8px 0;">
   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
     <button id="pl-btn" onclick="plToggle()"
-      style="background:#2a2a5a;color:#a0a0ff;border:1px solid #5050b0;border-radius:8px;
+      style="background:#ECEBFB;color:#4F46E5;border:1px solid #4F46E5;border-radius:8px;
              padding:7px 18px;cursor:pointer;font-family:JetBrains Mono,monospace;font-size:.88rem;">
       ▶ Play All
     </button>
-    <span id="pl-stat" style="color:#6060a0;font-size:.8rem;font-family:JetBrains Mono,monospace;">ready</span>
+    <span id="pl-stat" style="color:#7A7390;font-size:.8rem;font-family:JetBrains Mono,monospace;">ready</span>
   </div>
   <div id="pl-bar" style="margin-top:10px;display:flex;gap:4px;flex-wrap:wrap;"></div>
 </div>
@@ -255,13 +255,13 @@ def autoplaylist_html(audio_paths, pause_secs):
   let cur=-1, playing=false, aud=null, tmr=null;
   const bar=document.getElementById('pl-bar');
   for(let i=0;i<n;i++){{const d=document.createElement('div');d.id='dot-'+i;
-    d.style.cssText='width:10px;height:10px;border-radius:50%;background:#2a2a5a;transition:.2s;';
+    d.style.cssText='width:10px;height:10px;border-radius:50%;background:#ECEBFB;transition:.2s;';
     bar.appendChild(d);}}
   function dot(i,c){{const d=document.getElementById('dot-'+i);if(!d)return;
-    d.style.background=c==='active'?'#a0a0ff':c==='done'?'#40c070':'#2a2a5a';}}
+    d.style.background=c==='active'?'#4F46E5':c==='done'?'#1FB888':'#ECEBFB';}}
   function stop(){{if(aud){{aud.pause();aud=null;}}if(tmr){{clearTimeout(tmr);tmr=null;}}
     playing=false;cur=-1;document.getElementById('pl-btn').textContent='▶ Play All';
-    document.getElementById('pl-btn').style.color='#a0a0ff';
+    document.getElementById('pl-btn').style.color='#4F46E5';
     document.getElementById('pl-stat').textContent='stopped';
     for(let i=0;i<n;i++)dot(i,'');}}
   function playIdx(i){{if(i>=n){{stop();document.getElementById('pl-stat').textContent='done ✓';return;}}
@@ -274,7 +274,7 @@ def autoplaylist_html(audio_paths, pause_secs):
     aud.play().catch(()=>{{tmr=setTimeout(()=>playIdx(i+1),500);}});}}
   window.plToggle=function(){{if(playing){{stop();}}else{{
     document.getElementById('pl-btn').textContent='■ Stop';
-    document.getElementById('pl-btn').style.color='#ff6060';playIdx(0);}}}};
+    document.getElementById('pl-btn').style.color='#FF7B6B';playIdx(0);}}}};
 }})();
 </script>
 """
@@ -292,14 +292,14 @@ def autoplaylist_html_with_highlight(audio_paths, pause_secs, uid="pl"):
     pauses_js = str([round(s, 2) for s in pause_secs])
     n = len(srcs)
     return f"""
-<div style="background:#13131e;border:1px solid #2a2a4a;border-radius:12px;padding:14px 18px;margin:8px 0;">
+<div style="background:#FFFFFF;border:1px solid #E8E2D8;border-radius:12px;padding:14px 18px;margin:8px 0;">
   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
     <button id="pl-btn-{uid}" onclick="plToggle_{uid}()"
-      style="background:#2a2a5a;color:#a0a0ff;border:1px solid #5050b0;border-radius:8px;
+      style="background:#ECEBFB;color:#4F46E5;border:1px solid #4F46E5;border-radius:8px;
              padding:7px 18px;cursor:pointer;font-family:JetBrains Mono,monospace;font-size:.88rem;">
       ▶ Play All
     </button>
-    <span id="pl-stat-{uid}" style="color:#6060a0;font-size:.8rem;font-family:JetBrains Mono,monospace;">ready</span>
+    <span id="pl-stat-{uid}" style="color:#7A7390;font-size:.8rem;font-family:JetBrains Mono,monospace;">ready</span>
   </div>
   <div id="pl-bar-{uid}" style="margin-top:10px;display:flex;gap:4px;flex-wrap:wrap;"></div>
 </div>
@@ -309,14 +309,14 @@ def autoplaylist_html_with_highlight(audio_paths, pause_secs, uid="pl"):
   let cur=-1,playing=false,aud=null,tmr=null;
   const bar=document.getElementById('pl-bar-'+uid);
   for(let i=0;i<n;i++){{const d=document.createElement('div');d.id='dot-'+uid+'-'+i;
-    d.style.cssText='width:10px;height:10px;border-radius:50%;background:#2a2a5a;transition:.2s;';
+    d.style.cssText='width:10px;height:10px;border-radius:50%;background:#ECEBFB;transition:.2s;';
     bar.appendChild(d);}}
   function dot(i,c){{const d=document.getElementById('dot-'+uid+'-'+i);if(!d)return;
-    d.style.background=c==='active'?'#a0a0ff':c==='done'?'#40c070':'#2a2a5a';}}
+    d.style.background=c==='active'?'#4F46E5':c==='done'?'#1FB888':'#ECEBFB';}}
   function stop(){{if(aud){{aud.pause();aud=null;}}if(tmr){{clearTimeout(tmr);tmr=null;}}
     playing=false;cur=-1;
     document.getElementById('pl-btn-'+uid).textContent='▶ Play All';
-    document.getElementById('pl-btn-'+uid).style.color='#a0a0ff';
+    document.getElementById('pl-btn-'+uid).style.color='#4F46E5';
     document.getElementById('pl-stat-'+uid).textContent='done ✓';
     for(let i=0;i<n;i++)dot(i,'done');}}
   function playIdx(i){{
@@ -334,7 +334,7 @@ def autoplaylist_html_with_highlight(audio_paths, pause_secs, uid="pl"):
   window['plToggle_'+uid]=function(){{
     if(playing){{stop();document.getElementById('pl-stat-'+uid).textContent='stopped';}}
     else{{document.getElementById('pl-btn-'+uid).textContent='■ Stop';
-          document.getElementById('pl-btn-'+uid).style.color='#ff6060';playIdx(0);}}}};
+          document.getElementById('pl-btn-'+uid).style.color='#FF7B6B';playIdx(0);}}}};
 }})();
 </script>
 """
@@ -380,44 +380,44 @@ def autoplaylist_with_table(phrases, audio_paths, pause_secs, uid="pl",
     return f"""
 <style>
   .ph-table {{
-    background:#13131e; border:1px solid #222236; border-radius:12px;
+    background:#FFFFFF; border:1px solid #DDD6CA; border-radius:12px;
     overflow:hidden; margin:10px 0;
   }}
   .ph-row {{
     display:flex; align-items:center; padding:11px 18px;
-    border-bottom:1px solid #1e1e30; gap:14px;
+    border-bottom:1px solid #E8E2D8; gap:14px;
     transition: background .15s, border-left-color .15s;
     border-left:3px solid transparent;
   }}
   .ph-row:last-child {{ border-bottom:none; }}
-  .ph-num {{ font-family:'JetBrains Mono',monospace; color:#4040a0;
+  .ph-num {{ font-family:'JetBrains Mono',monospace; color:#2E27A8;
             font-size:.73rem; min-width:26px; }}
-  .ph-nat {{ color:#5a5a80; flex:1; font-size:.93rem; }}
-  .ph-tgt {{ color:#9090b8; flex:1; font-size:.93rem; font-weight:500; }}
+  .ph-nat {{ color:#7A7390; flex:1; font-size:.93rem; }}
+  .ph-tgt {{ color:#4B4564; flex:1; font-size:.93rem; font-weight:500; }}
   .ph-row.active {{
-    background:#1e1e40; border-left-color:#6060d0;
+    background:#ECEBFB; border-left-color:#4F46E5;
   }}
-  .ph-row.active .ph-nat {{ color:#c0c0ff; }}
-  .ph-row.active .ph-tgt {{ color:#ffffff; font-weight:600; }}
-  .ph-row.done {{ background:#101820; }}
-  .ph-row.done .ph-tgt {{ color:#60c090; }}
+  .ph-row.active .ph-nat {{ color:#1B1730; }}
+  .ph-row.active .ph-tgt {{ color:#1B1730; font-weight:600; }}
+  .ph-row.done {{ background:#F4F0EB; }}
+  .ph-row.done .ph-tgt {{ color:#0E6E50; }}
   .pl-wrap {{
-    background:#13131e; border:1px solid #2a2a4a; border-radius:12px;
+    background:#FFFFFF; border:1px solid #E8E2D8; border-radius:12px;
     padding:14px 18px; margin:8px 0;
   }}
   .pl-btn {{
-    background:#2a2a5a; color:#a0a0ff; border:1px solid #5050b0;
+    background:#ECEBFB; color:#4F46E5; border:1px solid #4F46E5;
     border-radius:8px; padding:7px 18px; cursor:pointer;
     font-family:'JetBrains Mono',monospace; font-size:.88rem;
   }}
   .pl-stat {{
-    color:#6060a0; font-size:.8rem; font-family:'JetBrains Mono',monospace;
+    color:#7A7390; font-size:.8rem; font-family:'JetBrains Mono',monospace;
     margin-left:12px;
   }}
   .pl-bar {{ margin-top:10px; display:flex; gap:4px; flex-wrap:wrap; }}
   .pl-dot {{
     width:10px; height:10px; border-radius:50%;
-    background:#2a2a5a; transition:.2s;
+    background:#ECEBFB; transition:.2s;
   }}
 </style>
 
@@ -445,8 +445,8 @@ def autoplaylist_with_table(phrases, audio_paths, pause_secs, uid="pl",
   function dot(i, c) {{
     const d = document.getElementById('dot-'+uid+'-'+i);
     if (!d) return;
-    d.style.background = c==='active' ? '#a0a0ff'
-                       : c==='done'   ? '#40c070' : '#2a2a5a';
+    d.style.background = c==='active' ? '#4F46E5'
+                       : c==='done'   ? '#1FB888' : '#ECEBFB';
   }}
 
   // Highlight rows
@@ -483,7 +483,7 @@ def autoplaylist_with_table(phrases, audio_paths, pause_secs, uid="pl",
     if (tmr) {{ clearTimeout(tmr); tmr = null; }}
     playing = false; cur = -1;
     document.getElementById('pl-btn-'+uid).textContent = '▶ Play All';
-    document.getElementById('pl-btn-'+uid).style.color = '#a0a0ff';
+    document.getElementById('pl-btn-'+uid).style.color = '#4F46E5';
   }}
 
   function playIdx(i) {{
@@ -521,7 +521,7 @@ def autoplaylist_with_table(phrases, audio_paths, pause_secs, uid="pl",
       clearAllRows();
       for (let i=0; i<n; i++) dot(i, '');
       document.getElementById('pl-btn-'+uid).textContent = '■ Stop';
-      document.getElementById('pl-btn-'+uid).style.color = '#ff6060';
+      document.getElementById('pl-btn-'+uid).style.color = '#FF7B6B';
       playIdx(0);
     }}
   }};
@@ -562,7 +562,7 @@ def phrase_table(phrases, show_native=True, show_target=True, scores=None, highl
         if active_idx == i:
             row_cls = ' class="prow prow-active"'
         elif highlight == i:
-            row_cls = ' class="prow" style="background:#1e1e35"'
+            row_cls = ' class="prow" style="background:var(--mova-surface-2)"'
         else:
             row_cls = ' class="prow"'
         html += f'<div{row_cls}>{num}{nat}{tgt}{sc}</div>'
@@ -594,7 +594,7 @@ def step_hdr(step, title=None, desc=None, total=8):
         f'{"🔒" if s in REQUIRED_STEPS and s > step else s}</span>'
         for s in range(1, total+1)
     )
-    req_note = (f' <span style="color:#d08040;font-size:.72rem;">🔒 {req_word}</span>'
+    req_note = (f' <span style="color:var(--mova-amber-ink);font-size:.72rem;">🔒 {req_word}</span>'
                 if step in REQUIRED_STEPS else '')
 
     st.markdown(f"""
@@ -724,7 +724,7 @@ def step3(session: LessonSession, tts_lang, wh_lang):
     if scores:
         done_html = "".join(
             f'<div class="prow"><span class="pnum">{i+1:02d}</span>'
-            f'<span style="color:{"#2a7a4a" if v else "#7a2a2a"};flex:1">'
+            f'<span style="color:{"var(--mova-mint-ink)" if v else "var(--mova-coral-ink)"};flex:1">'
             f'{"✓" if v else "✗"} {phrases[i]["target"]}</span></div>'
             for i, v in sorted(scores.items())
         )
@@ -954,9 +954,9 @@ def render_complete(session: LessonSession):
     st.markdown(f"""
     <div class="cbanner">
       <div style="font-size:2.8rem">🎉</div>
-      <h2 style="color:#f0f0ff;margin:10px 0">Lesson Complete!</h2>
-      <p style="color:#a0a0c0">
-        Pass rate: <strong style="color:#40c070">{rate:.0f}%</strong>
+      <h2 style="color:var(--mova-ink);margin:10px 0">Lesson Complete!</h2>
+      <p style="color:var(--mova-ink-2)">
+        Pass rate: <strong style="color:var(--mova-mint)">{rate:.0f}%</strong>
         ({passed}/{total} checks passed)
       </p>
     </div>""", unsafe_allow_html=True)
@@ -1024,8 +1024,8 @@ def render_setup():
     st.markdown(f"""
     <div style="text-align:center;padding:48px 0 24px">
       <div style="font-size:3rem">{cfg['icon']}</div>
-      <h1 style="color:#f0f0ff;font-weight:600;margin:10px 0 4px">IMLLS — {cfg['label']}</h1>
-      <p style="color:#606090">Intelligent Multilingual Language Learning System</p>
+      <h1 style="color:var(--mova-ink);font-weight:600;margin:10px 0 4px">IMLLS — {cfg['label']}</h1>
+      <p style="color:var(--mova-ink-3)">Intelligent Multilingual Language Learning System</p>
     </div>""", unsafe_allow_html=True)
 
     db_path = cfg["db_path"]
@@ -1263,24 +1263,24 @@ def step8(session: LessonSession, tts_lang, wh_lang):
             changed = orig.strip().lower() != corr.strip().lower()
             if changed: any_corrected = True
 
-            color  = "#c04060" if changed else "#40c070"
+            color  = "#c04060" if changed else "var(--mova-mint)"
             icon   = "✗" if changed else "✓"
             label  = "corrected" if changed else "correct"
 
             if changed:
                 corr_html = (
-                    "<div style='color:#e0e0ff;font-size:1rem;margin-top:6px;'>"
-                    "<span style='color:#40c070;'>GEC: </span>"
+                    "<div style='color:var(--mova-ink);font-size:1rem;margin-top:6px;'>"
+                    "<span style='color:var(--mova-mint);'>GEC: </span>"
                     + corr + "</div>"
                 )
             else:
                 corr_html = ""
 
             html_block = (
-                "<div style='background:#13131e;border:1px solid #2a2a4a;"
+                "<div style='background:var(--mova-card);border:1px solid var(--mova-line);"
                 "border-radius:12px;padding:14px 20px;margin:8px 0;'>"
                 f"<div style='color:#808090;font-size:.75rem;margin-bottom:6px;'>{icon} {label}</div>"
-                f"<div style='color:#e0e0ff;font-size:1rem;'>"
+                f"<div style='color:var(--mova-ink);font-size:1rem;'>"
                 f"<span style='color:#8888b8;'>You: </span>{orig}</div>"
                 + corr_html + "</div>"
             )
@@ -1342,7 +1342,7 @@ def _inject_css():
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 html,body,[class*="css"]{font-family:'Inter',sans-serif;}
-.stApp{background:#0d0d14;color:#e2e2f0;}
+/* removed: was fighting Mova surface; theme is now driven by tokens.css */
 #MainMenu,footer{visibility:hidden;}
 /* Keep Streamlit's sidebar collapse/expand control reachable on every device,
    including iOS Safari, where the control would otherwise be invisible. */
@@ -1357,41 +1357,41 @@ header [data-testid="stDecoration"]{display:none;}
     position:fixed !important;
     top:0.6rem !important;
     left:0.6rem !important;
-    background:#1a1a2e !important;
-    border:1px solid #5050b0 !important;
+    background:var(--mova-card) !important;
+    border:1px solid var(--mova-indigo) !important;
     border-radius:8px !important;
     box-shadow:0 2px 8px rgba(0,0,0,.4) !important;
 }
 [data-testid="collapsedControl"] button,
 [data-testid="collapsedControl"] svg{
-    color:#a0a0ff !important;
-    fill:#a0a0ff !important;
+    color:var(--mova-indigo) !important;
+    fill:var(--mova-indigo) !important;
     min-width:36px !important;
     min-height:36px !important;
 }
 
-.step-header{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #2a2a4a;border-radius:14px;padding:18px 26px;margin-bottom:18px;}
-.step-num{font-family:'JetBrains Mono',monospace;color:#6060c0;font-size:.78rem;margin-bottom:4px;}
-.step-title{color:#f0f0ff;font-size:1.25rem;font-weight:600;}
-.step-desc{color:#8080a0;font-size:.88rem;margin-top:5px;}
+.step-header{background:var(--mova-card);border:1px solid var(--mova-line);border-radius:14px;padding:18px 26px;margin-bottom:18px;}
+.step-num{font-family:'JetBrains Mono',monospace;color:var(--mova-indigo);font-size:.78rem;margin-bottom:4px;}
+.step-title{color:var(--mova-ink);font-size:1.25rem;font-weight:600;}
+.step-desc{color:var(--mova-ink-2);font-size:.88rem;margin-top:5px;}
 .step-pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
-.pill{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:3px 9px;border-radius:20px;background:#1a1a2e;color:#5050a0;border:1px solid #2a2a3a;}
-.pill-active{background:#2a2a5a;color:#a0a0ff;border-color:#5050b0;}
-.pill-done{background:#0d2e1a;color:#40c070;border-color:#204030;}
+.pill{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:3px 9px;border-radius:20px;background:var(--mova-card);color:var(--mova-ink-3);border:1px solid var(--mova-line);}
+.pill-active{background:var(--mova-indigo-soft);color:var(--mova-indigo);border-color:var(--mova-indigo);}
+.pill-done{background:var(--mova-mint-soft);color:var(--mova-mint);border-color:var(--mova-mint);}
 
-.ptable{background:#13131e;border:1px solid #222236;border-radius:12px;overflow:hidden;margin:10px 0;}
-.prow{display:flex;align-items:center;padding:11px 18px;border-bottom:1px solid #1e1e30;gap:14px;}
+.ptable{background:var(--mova-card);border:1px solid var(--mova-line-2);border-radius:12px;overflow:hidden;margin:10px 0;}
+.prow{display:flex;align-items:center;padding:11px 18px;border-bottom:1px solid var(--mova-line);gap:14px;}
 .prow:last-child{border-bottom:none;}
-.prow:hover{background:#1a1a2a;}
-.pnum{font-family:'JetBrains Mono',monospace;color:#6060d0;font-size:.78rem;min-width:26px;}
-.pnat{color:#c8c8e8;flex:1;font-size:.98rem;}
-.ptgt{color:#ffffff;flex:1;font-size:.98rem;font-weight:500;}
-.phide{color:#404060;flex:1;font-style:italic;font-size:.85rem;}
-.spass{background:#0d2e1a;color:#40c070;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
-.sfail{background:#2e0d0d;color:#c04040;border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
+.prow:hover{background:var(--mova-surface-3);}
+.pnum{font-family:'JetBrains Mono',monospace;color:var(--mova-indigo);font-size:.78rem;min-width:26px;}
+.pnat{color:var(--mova-ink);flex:1;font-size:.98rem;}
+.ptgt{color:var(--mova-ink);flex:1;font-size:.98rem;font-weight:500;}
+.phide{color:var(--mova-ink-4);flex:1;font-style:italic;font-size:.85rem;}
+.spass{background:var(--mova-mint-soft);color:var(--mova-mint);border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
+.sfail{background:var(--mova-coral-soft);color:var(--mova-coral-ink);border-radius:5px;padding:2px 9px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
 
 /* Color-coded step type — left border tells the user what kind of step it is */
-.step-header.step-type-reading     { border-left: 4px solid #5060c0; }
+.step-header.step-type-reading     { border-left: 4px solid var(--mova-indigo); }
 .step-header.step-type-listening   { border-left: 4px solid #8050b0; }
 .step-header.step-type-matching    { border-left: 4px solid #40a0a0; }
 .step-header.step-type-translation { border-left: 4px solid #40a060; }
@@ -1413,26 +1413,26 @@ header [data-testid="stDecoration"]{display:none;}
 
 /* Step 3 — make choice buttons readable (dark theme instead of light) */
 .stApp .stButton > button[kind="secondary"]{
-    background:#1a1a2e !important;
-    color:#f0f0ff !important;
-    border:1px solid #2a2a4a !important;
+    background:var(--mova-card) !important;
+    color:var(--mova-ink) !important;
+    border:1px solid var(--mova-line) !important;
     font-weight:500 !important;
 }
 .stApp .stButton > button[kind="secondary"]:hover{
-    background:#262648 !important;
-    border-color:#5050b0 !important;
-    color:#ffffff !important;
+    background:var(--mova-indigo-soft) !important;
+    border-color:var(--mova-indigo) !important;
+    color:var(--mova-ink) !important;
 }
 
-.timer{font-family:'JetBrains Mono',monospace;font-size:2.4rem;color:#a0a0ff;text-align:center;padding:14px;background:#13131e;border-radius:12px;border:1px solid #2a2a4a;margin:10px 0;}
-.prow-active{background:#1e1e40 !important;border-left:3px solid #6060d0;}
-.prow-active .pnat{color:#c0c0ff !important;}
-.prow-active .ptgt{color:#ffffff !important;font-weight:600;}
-.pill-required{background:#2e1a0d;color:#d08040;border-color:#704020;}
-.progress-bar-wrap{background:#1a1a2e;border-radius:8px;height:8px;margin:6px 0;overflow:hidden;}
-.progress-bar-fill{height:8px;border-radius:8px;background:linear-gradient(90deg,#4040c0,#6060ff);transition:width .4s;}
-.progress-info{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#5050a0;margin-bottom:2px;}
-.cbanner{background:linear-gradient(135deg,#0d2e1a,#1a1a2e);border:1px solid #304030;border-radius:16px;padding:36px;text-align:center;}
+.timer{font-family:'JetBrains Mono',monospace;font-size:2.4rem;color:var(--mova-indigo);text-align:center;padding:14px;background:var(--mova-card);border-radius:12px;border:1px solid var(--mova-line);margin:10px 0;}
+.prow-active{background:var(--mova-indigo-soft) !important;border-left:3px solid var(--mova-indigo);}
+.prow-active .pnat{color:var(--mova-ink) !important;}
+.prow-active .ptgt{color:var(--mova-ink) !important;font-weight:600;}
+.pill-required{background:var(--mova-amber-soft);color:var(--mova-amber-ink);border-color:var(--mova-amber);}
+.progress-bar-wrap{background:var(--mova-card);border-radius:8px;height:8px;margin:6px 0;overflow:hidden;}
+.progress-bar-fill{height:8px;border-radius:8px;background:linear-gradient(90deg, var(--mova-indigo), #6E66FF);transition:width .4s;}
+.progress-info{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--mova-ink-3);margin-bottom:2px;}
+.cbanner{background:linear-gradient(135deg, var(--mova-mint-soft), var(--mova-indigo-soft));border:1px solid var(--mova-mint);border-radius:16px;padding:36px;text-align:center;}
 audio{width:100%;border-radius:8px;margin:4px 0;}
 </style>
 """, unsafe_allow_html=True)
@@ -1478,13 +1478,13 @@ def main(module: str = "grammar"):
             completed_lessons = max(state.lesson_id - 1, 0)
             lesson_pct = round(completed_lessons / total_lessons * 100, 1)
             st.markdown(
-                f'<div style="background:#13131e;border:1px solid #2a2a4a;'
+                f'<div style="background:var(--mova-card);border:1px solid var(--mova-line);'
                 f'border-radius:10px;padding:10px 12px;margin:4px 0 10px">'
-                f'<div style="color:#8080a0;font-size:.7rem;'
+                f'<div style="color:var(--mova-ink-2);font-size:.7rem;'
                 f'font-family:\'JetBrains Mono\',monospace;'
                 f'text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">'
                 f'Your path · {cfg["label"]}</div>'
-                f'<div style="color:#f0f0ff;font-size:1.05rem;font-weight:600">'
+                f'<div style="color:var(--mova-ink);font-size:1.05rem;font-weight:600">'
                 f'{cfg["lesson_word"]} {state.lesson_id} / {total_lessons}'
                 f'</div>'
                 f'<div class="progress-info" style="margin-top:6px">'
@@ -1501,7 +1501,7 @@ def main(module: str = "grammar"):
                 f'<span>Step {cur_step} / 8</span>'
                 f'<span>{"🔒" if cur_step in REQUIRED_STEPS else ""}</span></div>'
                 f'<div class="progress-bar-wrap">'
-                f'<div class="progress-bar-fill" style="width:{step_pct}%;background:linear-gradient(90deg,#205040,#40c070)"></div></div>',
+                f'<div class="progress-bar-fill" style="width:{step_pct}%;background:linear-gradient(90deg, var(--mova-mint), #34D0A0)"></div></div>',
                 unsafe_allow_html=True
             )
             st.caption(f"`{state.language_pair}`")

@@ -1,0 +1,369 @@
+/* ============================================================
+   mova. — Streamlit native widget overrides
+   Targets Streamlit's actual DOM selectors so the native widgets
+   inherit the Mova look without being replaced. Load AFTER
+   tokens.css.
+
+   To inject in app.py:
+       css = Path('streamlit-overrides.css').read_text()
+       st.markdown(f"<style>{css}<\/style>", unsafe_allow_html=True)
+   (the slash-escape on the closing tag stops a literal '</' + 'style>'
+   from ever appearing in source — so this file is safe to inline.)
+   ============================================================ */
+
+/* ---------- App shell ---------- */
+
+.stApp {
+  background: var(--mova-surface) !important;
+  color: var(--mova-ink);
+  font-family: var(--mova-font-sans) !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Centre the main column on desktop, leave it edge-to-edge on mobile */
+.stApp .block-container,
+section.main > div.block-container {
+  max-width: var(--mova-container-max) !important;
+  padding-top: var(--mova-sp-6) !important;
+  padding-bottom: var(--mova-sp-9) !important;
+}
+
+/* Pull the header down to invisible so our own banner can own the top */
+header[data-testid="stHeader"] {
+  background: transparent !important;
+  height: 0 !important;
+}
+
+/* ---------- Sidebar (left nav, replaces the bottom-tab pattern) ---------- */
+
+[data-testid="stSidebar"] {
+  background: var(--mova-card) !important;
+  border-right: 1px solid var(--mova-line);
+  box-shadow: var(--mova-shadow-1);
+}
+
+[data-testid="stSidebar"] > div {
+  padding-top: var(--mova-sp-6);
+}
+
+[data-testid="stSidebar"] [data-testid="stSidebarNav"] a {
+  color: var(--mova-ink-2);
+  font-weight: var(--mova-fw-semi);
+  font-size: var(--mova-fs-body);
+  padding: var(--mova-sp-3) var(--mova-sp-4);
+  border-radius: var(--mova-radius-2);
+}
+
+[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[aria-current="page"],
+[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {
+  background: var(--mova-indigo-soft);
+  color: var(--mova-indigo-ink);
+}
+
+[data-testid="collapsedControl"] {
+  background: var(--mova-card) !important;
+  color: var(--mova-ink) !important;
+  border-radius: var(--mova-radius-2);
+  box-shadow: var(--mova-shadow-1);
+}
+
+/* ---------- Buttons ---------- */
+
+.stButton > button,
+.stDownloadButton > button,
+.stFormSubmitButton > button {
+  font-family: var(--mova-font-sans) !important;
+  font-weight: var(--mova-fw-bold) !important;
+  font-size: var(--mova-fs-body) !important;
+  letter-spacing: var(--mova-tracking-tight);
+  border-radius: var(--mova-radius-2) !important;
+  min-height: 48px;                /* ≥ 44px tap target */
+  padding: 0 var(--mova-sp-5) !important;
+  border: 1px solid transparent;
+  transition: transform var(--mova-dur-1) var(--mova-ease),
+              background var(--mova-dur-2) var(--mova-ease),
+              box-shadow var(--mova-dur-2) var(--mova-ease);
+}
+
+/* Primary — Coral, single per screen */
+.stButton > button[kind="primary"],
+.stFormSubmitButton > button[kind="primary"] {
+  background: var(--mova-coral) !important;
+  color: #fff !important;
+  border-color: var(--mova-coral) !important;
+  box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 2px 6px rgba(255, 123, 107, 0.28);
+}
+.stButton > button[kind="primary"]:hover,
+.stFormSubmitButton > button[kind="primary"]:hover {
+  background: var(--mova-coral-press) !important;
+  border-color: var(--mova-coral-press) !important;
+}
+.stButton > button[kind="primary"]:active {
+  transform: translateY(1px);
+}
+.stButton > button[kind="primary"]:focus-visible {
+  box-shadow: var(--mova-shadow-coral-focus) !important;
+  outline: none;
+}
+
+/* Secondary — surface-light, dark text */
+.stButton > button[kind="secondary"],
+.stButton > button:not([kind]) {
+  background: var(--mova-card) !important;
+  color: var(--mova-ink) !important;
+  border-color: var(--mova-line-2) !important;
+  box-shadow: var(--mova-shadow-1);
+}
+.stButton > button[kind="secondary"]:hover,
+.stButton > button:not([kind]):hover {
+  background: var(--mova-surface-3) !important;
+  border-color: var(--mova-ink-4) !important;
+}
+.stButton > button:focus-visible {
+  box-shadow: var(--mova-shadow-focus) !important;
+  outline: none;
+}
+
+/* Make Streamlit's "use container width" buttons feel right */
+.stButton > button[data-testid="baseButton-primary"][kind="primary"] {
+  width: 100%;
+}
+
+/* ---------- Inputs ---------- */
+
+.stTextInput input,
+.stTextArea textarea,
+.stNumberInput input,
+.stDateInput input,
+.stTimeInput input {
+  font-family: var(--mova-font-sans) !important;
+  font-size: var(--mova-fs-body) !important;
+  color: var(--mova-ink) !important;
+  background: var(--mova-card) !important;
+  border: 1px solid var(--mova-line-2) !important;
+  border-radius: var(--mova-radius-2) !important;
+  min-height: 48px;
+  padding: var(--mova-sp-3) var(--mova-sp-4) !important;
+  box-shadow: none !important;
+  transition: border-color var(--mova-dur-2) var(--mova-ease),
+              box-shadow var(--mova-dur-2) var(--mova-ease);
+}
+.stTextInput input::placeholder,
+.stTextArea textarea::placeholder {
+  color: var(--mova-ink-3) !important;
+}
+.stTextInput input:focus,
+.stTextArea textarea:focus,
+.stNumberInput input:focus {
+  border-color: var(--mova-indigo) !important;
+  box-shadow: var(--mova-shadow-focus) !important;
+  outline: none !important;
+}
+
+.stTextArea textarea {
+  min-height: 132px;
+  line-height: var(--mova-lh-body);
+}
+
+/* Labels above all inputs */
+[data-testid="stWidgetLabel"] p,
+.stTextInput label,
+.stTextArea label,
+.stSelectbox label,
+.stRadio label[data-baseweb="form-control"] {
+  font-weight: var(--mova-fw-semi) !important;
+  color: var(--mova-ink) !important;
+  font-size: var(--mova-fs-small) !important;
+  margin-bottom: var(--mova-sp-2) !important;
+}
+
+/* ---------- Select / multiselect ---------- */
+
+.stSelectbox > div[data-baseweb="select"] > div,
+.stMultiSelect > div[data-baseweb="select"] > div {
+  background: var(--mova-card) !important;
+  border: 1px solid var(--mova-line-2) !important;
+  border-radius: var(--mova-radius-2) !important;
+  min-height: 48px;
+  font-family: var(--mova-font-sans);
+  color: var(--mova-ink);
+}
+.stSelectbox > div[data-baseweb="select"] svg {
+  color: var(--mova-ink-3);
+}
+/* Open popover styling */
+div[data-baseweb="popover"] li[role="option"] {
+  font-family: var(--mova-font-sans);
+  font-size: var(--mova-fs-body);
+  color: var(--mova-ink);
+}
+div[data-baseweb="popover"] li[role="option"][aria-selected="true"] {
+  background: var(--mova-indigo-soft);
+  color: var(--mova-indigo-ink);
+}
+
+/* ---------- Radio (vertical & horizontal) ---------- */
+
+.stRadio [role="radiogroup"] {
+  gap: var(--mova-sp-2) !important;
+}
+.stRadio [role="radiogroup"] label {
+  display: flex;
+  align-items: center;
+  gap: var(--mova-sp-3);
+  padding: var(--mova-sp-3) var(--mova-sp-4);
+  background: var(--mova-card);
+  border: 1px solid var(--mova-line);
+  border-radius: var(--mova-radius-2);
+  min-height: 56px;
+  cursor: pointer;
+  transition: border-color var(--mova-dur-2) var(--mova-ease),
+              background var(--mova-dur-2) var(--mova-ease);
+}
+.stRadio [role="radiogroup"] label:hover {
+  border-color: var(--mova-ink-4);
+  background: var(--mova-surface-2);
+}
+.stRadio [role="radiogroup"] label[data-checked="true"] {
+  border-color: var(--mova-indigo);
+  background: var(--mova-indigo-soft);
+}
+.stRadio [role="radiogroup"] label > div:first-child {
+  border-color: var(--mova-ink-3) !important;
+}
+.stRadio [role="radiogroup"] label[data-checked="true"] > div:first-child {
+  border-color: var(--mova-indigo) !important;
+  background: var(--mova-indigo) !important;
+}
+
+/* ---------- Checkbox & toggle ---------- */
+
+.stCheckbox label > div:first-child {
+  border-color: var(--mova-ink-3) !important;
+  border-radius: var(--mova-radius-1) !important;
+}
+.stCheckbox label[data-checked="true"] > div:first-child {
+  background: var(--mova-indigo) !important;
+  border-color: var(--mova-indigo) !important;
+}
+
+/* ---------- Audio input (mic) ---------- */
+
+[data-testid="stAudioInput"] {
+  background: var(--mova-card);
+  border: 1px solid var(--mova-line);
+  border-radius: var(--mova-radius-3);
+  padding: var(--mova-sp-4);
+}
+[data-testid="stAudioInput"] button {
+  background: var(--mova-coral) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: var(--mova-radius-full) !important;
+  width: 64px;
+  height: 64px;
+  box-shadow: 0 4px 16px rgba(255, 123, 107, 0.35);
+  transition: transform var(--mova-dur-1) var(--mova-ease);
+}
+[data-testid="stAudioInput"] button:hover {
+  background: var(--mova-coral-press) !important;
+  transform: scale(1.03);
+}
+[data-testid="stAudioInput"] button[aria-pressed="true"] {
+  animation: mova-mic-pulse 1.4s var(--mova-ease) infinite;
+}
+[data-testid="stAudioInput"] svg {
+  width: 28px; height: 28px;
+}
+
+/* ---------- Progress bar ---------- */
+
+.stProgress > div > div > div {
+  background: var(--mova-surface-3) !important;
+  border-radius: var(--mova-radius-full);
+  height: 8px;
+}
+.stProgress > div > div > div > div {
+  background: linear-gradient(90deg, var(--mova-indigo), #6E66FF) !important;
+  border-radius: var(--mova-radius-full);
+}
+
+/* ---------- Alerts (st.success / st.info / st.warning / st.error) ---------- */
+
+[data-testid="stAlert"] {
+  border-radius: var(--mova-radius-3) !important;
+  border: 1px solid transparent;
+  padding: var(--mova-sp-4) var(--mova-sp-4) var(--mova-sp-4) var(--mova-sp-5) !important;
+  font-family: var(--mova-font-sans);
+}
+[data-testid="stAlert"][kind="info"]    { background: var(--mova-indigo-soft); border-color: rgba(79,70,229,.18); color: var(--mova-indigo-ink); }
+[data-testid="stAlert"][kind="success"] { background: var(--mova-mint-soft);   border-color: rgba(31,184,136,.22); color: var(--mova-mint-ink); }
+[data-testid="stAlert"][kind="warning"] { background: var(--mova-amber-soft);  border-color: rgba(244,183,64,.30); color: var(--mova-amber-ink); }
+[data-testid="stAlert"][kind="error"]   { background: var(--mova-coral-soft);  border-color: rgba(255,123,107,.30); color: var(--mova-coral-ink); }
+
+/* ---------- Expander, divider, caption ---------- */
+
+[data-testid="stExpander"] {
+  border: 1px solid var(--mova-line) !important;
+  border-radius: var(--mova-radius-3) !important;
+  background: var(--mova-card);
+  box-shadow: var(--mova-shadow-1);
+}
+[data-testid="stExpander"] summary {
+  font-weight: var(--mova-fw-semi);
+  color: var(--mova-ink);
+  padding: var(--mova-sp-3) var(--mova-sp-4);
+}
+
+hr, [data-testid="stDivider"] {
+  border: 0 !important;
+  border-top: 1px solid var(--mova-line) !important;
+  margin: var(--mova-sp-6) 0 !important;
+}
+
+.stCaption, [data-testid="stCaptionContainer"] {
+  color: var(--mova-ink-3) !important;
+  font-size: var(--mova-fs-small) !important;
+}
+
+/* ---------- Tables ---------- */
+
+[data-testid="stTable"] table, .stDataFrame table {
+  font-family: var(--mova-font-sans);
+  font-size: var(--mova-fs-small);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+[data-testid="stTable"] th, .stDataFrame th {
+  background: var(--mova-surface-2) !important;
+  color: var(--mova-ink-2) !important;
+  font-weight: var(--mova-fw-semi);
+  text-transform: uppercase;
+  letter-spacing: var(--mova-tracking-label);
+  font-size: var(--mova-fs-micro);
+}
+[data-testid="stTable"] td, .stDataFrame td {
+  border-bottom: 1px solid var(--mova-line);
+}
+
+/* ---------- Toolbar / running spinner ---------- */
+
+[data-testid="stStatusWidget"] {
+  background: var(--mova-card) !important;
+  border-radius: var(--mova-radius-2);
+  box-shadow: var(--mova-shadow-1);
+}
+
+/* ---------- Headings inside markdown blocks ---------- */
+
+.stMarkdown h1 { font-size: var(--mova-fs-h1); font-weight: var(--mova-fw-black); letter-spacing: var(--mova-tracking-display); color: var(--mova-ink); }
+.stMarkdown h2 { font-size: var(--mova-fs-h2); font-weight: var(--mova-fw-bold);  letter-spacing: var(--mova-tracking-tight);  color: var(--mova-ink); }
+.stMarkdown h3 { font-size: var(--mova-fs-h3); font-weight: var(--mova-fw-bold);  color: var(--mova-ink); }
+.stMarkdown p, .stMarkdown li { color: var(--mova-ink-2); font-size: var(--mova-fs-body); line-height: var(--mova-lh-body); }
+
+/* mic-pulse keyframe lives in components.css; reference it here in case
+   you load overrides without components.css */
+@keyframes mova-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,123,107,.55), 0 4px 16px rgba(255,123,107,.35); }
+  50%      { box-shadow: 0 0 0 14px rgba(255,123,107,0), 0 4px 16px rgba(255,123,107,.35); }
+}

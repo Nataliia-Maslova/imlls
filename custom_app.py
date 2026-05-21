@@ -44,8 +44,8 @@ def render_setup():
     st.markdown("""
     <div style="text-align:center;padding:36px 0 18px">
       <div style="font-size:3rem">📝</div>
-      <h1 style="color:#f0f0ff;font-weight:600;margin:8px 0 4px">My Phrases</h1>
-      <p style="color:#606090">
+      <h1 style="color:var(--mova-ink);font-weight:600;margin:8px 0 4px">My Phrases</h1>
+      <p style="color:var(--mova-ink-3)">
         Створи свій урок із власних фраз — і тренуй той самий 8-крокевий цикл.
       </p>
     </div>
@@ -87,7 +87,7 @@ def render_setup():
                 with c1:
                     st.markdown(
                         f"**{row['lesson_name']}** "
-                        f"<span style='color:#6060a0;font-size:.8rem'>· {row['phrases']} phrases · id {lid}</span>",
+                        f"<span style='color:var(--mova-ink-3);font-size:.8rem'>· {row['phrases']} phrases · id {lid}</span>",
                         unsafe_allow_html=True,
                     )
                 with c2:
@@ -170,21 +170,21 @@ def render_setup():
             for i, (nat, tgt) in enumerate(pairs[:8], start=1):
                 preview_html += (
                     f'<div style="display:flex;gap:14px;padding:6px 10px;'
-                    f'background:#13131e;border-bottom:1px solid #1e1e30">'
-                    f'<span style="color:#4040a0;min-width:28px;'
+                    f'background:var(--mova-card);border-bottom:1px solid var(--mova-line)">'
+                    f'<span style="color:var(--mova-indigo-ink);min-width:28px;'
                     f'font-family:\'JetBrains Mono\',monospace;font-size:.72rem">{i:02d}</span>'
-                    f'<span style="flex:1;color:#c8c8e8">{nat}</span>'
+                    f'<span style="flex:1;color:var(--mova-ink)">{nat}</span>'
                     f'<span style="flex:1;color:#ffffff;font-weight:500">{tgt}</span>'
                     f'</div>'
                 )
             if len(pairs) > 8:
                 preview_html += (
-                    f'<div style="padding:6px 10px;color:#6060a0;font-size:.78rem">'
+                    f'<div style="padding:6px 10px;color:var(--mova-ink-3);font-size:.78rem">'
                     f'... та ще {len(pairs)-8} пар</div>'
                 )
             st.markdown(
                 f'<div style="border-radius:10px;overflow:hidden;'
-                f'background:#13131e;border:1px solid #2a2a4a">{preview_html}</div>',
+                f'background:var(--mova-card);border:1px solid var(--mova-line)">{preview_html}</div>',
                 unsafe_allow_html=True,
             )
         elif text.strip():

@@ -1,0 +1,627 @@
+/* ============================================================
+   mova. — Custom components for st.markdown(unsafe_allow_html=True)
+   Every class is prefixed .mova-* so it can't collide with Streamlit
+   internals. Load AFTER tokens.css.
+   ============================================================ */
+
+/* ---------- Cards ---------- */
+
+.mova-card {
+  background: var(--mova-card);
+  border: 1px solid var(--mova-line);
+  border-radius: var(--mova-radius-4);
+  padding: var(--mova-sp-5);
+  box-shadow: var(--mova-shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--mova-sp-3);
+}
+.mova-card-elevated {
+  background: var(--mova-card);
+  border: 1px solid var(--mova-line);
+  border-radius: var(--mova-radius-4);
+  padding: var(--mova-sp-6);
+  box-shadow: var(--mova-shadow-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--mova-sp-4);
+}
+
+.mova-card-title    { font-size: var(--mova-fs-h3); font-weight: var(--mova-fw-bold);  color: var(--mova-ink); letter-spacing: var(--mova-tracking-tight); margin: 0; }
+.mova-card-subtitle { font-size: var(--mova-fs-small); color: var(--mova-ink-3); margin: 0; }
+
+/* ---------- Step header (used on every exercise screen) ---------- */
+
+.mova-step-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mova-sp-3);
+  padding: var(--mova-sp-5) 0 var(--mova-sp-4);
+}
+.mova-step-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mova-sp-4);
+}
+.mova-step-eyebrow {
+  font-family: var(--mova-font-mono);
+  font-size: var(--mova-fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--mova-tracking-label);
+  color: var(--mova-ink-3);
+}
+.mova-step-title {
+  font-size: var(--mova-fs-h1);
+  font-weight: var(--mova-fw-black);
+  letter-spacing: var(--mova-tracking-display);
+  line-height: var(--mova-lh-tight);
+  color: var(--mova-ink);
+  margin: 0;
+  text-wrap: pretty;
+}
+.mova-step-desc {
+  font-size: var(--mova-fs-body);
+  color: var(--mova-ink-2);
+  line-height: var(--mova-lh-body);
+  margin: 0;
+  max-width: 52ch;
+}
+
+/* The 8-pill row at the top of every grammar step */
+.mova-step-pill-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.mova-step-pill {
+  flex: 1 1 0;
+  min-width: 28px;
+  height: 6px;
+  border-radius: var(--mova-radius-full);
+  background: var(--mova-surface-3);
+  transition: background var(--mova-dur-2) var(--mova-ease);
+}
+.mova-step-pill[data-state="done"]    { background: var(--mova-mint); }
+.mova-step-pill[data-state="active"]  { background: var(--mova-indigo); }
+.mova-step-pill[data-state="locked"]  { background: var(--mova-surface-3); }
+
+/* ---------- Progress bar (custom, when you don't want st.progress) ---------- */
+
+.mova-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mova-sp-2);
+}
+.mova-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mova-font-mono);
+  font-size: var(--mova-fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--mova-tracking-label);
+  color: var(--mova-ink-3);
+}
+.mova-progress-track {
+  height: 8px;
+  background: var(--mova-surface-3);
+  border-radius: var(--mova-radius-full);
+  overflow: hidden;
+}
+.mova-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--mova-indigo), #6E66FF);
+  border-radius: var(--mova-radius-full);
+  transition: width var(--mova-dur-3) var(--mova-ease);
+}
+
+/* ---------- Lesson tile (2x2 grid) ---------- */
+
+.mova-lesson-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mova-sp-3);
+  padding: var(--mova-sp-5);
+  background: var(--mova-card);
+  border: 1px solid var(--mova-line);
+  border-radius: var(--mova-radius-4);
+  box-shadow: var(--mova-shadow-1);
+  text-decoration: none;
+  color: inherit;
+  transition: transform var(--mova-dur-2) var(--mova-ease),
+              box-shadow var(--mova-dur-2) var(--mova-ease),
+              border-color var(--mova-dur-2) var(--mova-ease);
+}
+.mova-lesson-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mova-shadow-2);
+  border-color: var(--mova-line-2);
+}
+.mova-lesson-tile-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--mova-sp-3);
+}
+.mova-lesson-tile-title  { font-size: var(--mova-fs-h3); font-weight: var(--mova-fw-bold); color: var(--mova-ink); margin: 0; }
+.mova-lesson-tile-desc   { font-size: var(--mova-fs-small); color: var(--mova-ink-2); margin: 0; line-height: var(--mova-lh-snug); }
+.mova-lesson-tile-meta   { font-family: var(--mova-font-mono); font-size: var(--mova-fs-micro); color: var(--mova-ink-3); text-transform: uppercase; letter-spacing: var(--mova-tracking-label); }
+
+/* ---------- Lesson list row (search results) ---------- */
+
+.mova-lesson-list-item {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: var(--mova-sp-4);
+  align-items: center;
+  padding: var(--mova-sp-4);
+  background: var(--mova-card);
+  border: 1px solid var(--mova-line);
+  border-radius: var(--mova-radius-3);
+  transition: background var(--mova-dur-2) var(--mova-ease), border-color var(--mova-dur-2) var(--mova-ease);
+}
+.mova-lesson-list-item:hover {
+  background: var(--mova-surface-2);
+  border-color: var(--mova-line-2);
+}
+.mova-lesson-list-num {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  background: var(--mova-indigo-soft);
+  color: var(--mova-indigo-ink);
+  border-radius: var(--mova-radius-3);
+  font-family: var(--mova-font-mono);
+  font-weight: var(--mova-fw-bold);
+  font-size: 16px;
+}
+.mova-lesson-list-title { font-weight: var(--mova-fw-bold); font-size: var(--mova-fs-body); color: var(--mova-ink); margin: 0; }
+.mova-lesson-list-sub   { font-size: var(--mova-fs-small); color: var(--mova-ink-3); margin: 2px 0 0; }
+
+/* ---------- Banners ---------- */
+
+.mova-banner-info,
+.mova-banner-success,
+.mova-banner-warning {
+  display: flex;
+  gap: var(--mova-sp-3);
+  align-items: flex-start;
+  padding: var(--mova-sp-4) var(--mova-sp-5);
+  border-radius: var(--mova-radius-3);
+  border: 1px solid;
+  font-size: var(--mova-fs-body);
+  line-height: var(--mova-lh-snug);
+}
+.mova-banner-info    { background: var(--mova-indigo-soft); border-color: rgba(79,70,229,.18); color: var(--mova-indigo-ink); }
+.mova-banner-success { background: var(--mova-mint-soft);   border-color: rgba(31,184,136,.22); color: var(--mova-mint-ink); }
+.mova-banner-warning { background: var(--mova-amber-soft);  border-color: rgba(244,183,64,.30); color: var(--mova-amber-ink); }
+.mova-banner-strong  { font-weight: var(--mova-fw-bold); }
+.mova-banner-icon    { font-size: 18px; line-height: 1; margin-top: 1px; }
+
+/* ---------- Empty state ---------- */
+
+.mova-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--mova-sp-4);
+  padding: var(--mova-sp-9) var(--mova-sp-5);
+  background: var(--mova-card);
+  border: 1px dashed var(--mova-line-2);
+  border-radius: var(--mova-radius-4);
+}
+.mova-empty-state-illust {
+  width: 96px; height: 96px;
+  border-radius: var(--mova-radius-5);
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--mova-step-2-from), var(--mova-step-2-to));
+  color: #fff;
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.18), var(--mova-shadow-2);
+  font-size: 44px;
+}
+.mova-empty-state h2 { font-size: var(--mova-fs-h2); font-weight: var(--mova-fw-bold); margin: 0; color: var(--mova-ink); }
+.mova-empty-state p  { font-size: var(--mova-fs-body); color: var(--mova-ink-2); margin: 0; max-width: 38ch; line-height: var(--mova-lh-body); }
+
+/* ---------- Chips & badges ---------- */
+
+.mova-language-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px var(--mova-sp-3);
+  border-radius: var(--mova-radius-full);
+  background: var(--mova-surface-2);
+  border: 1px solid var(--mova-line);
+  color: var(--mova-ink-2);
+  font-size: var(--mova-fs-small);
+  font-weight: var(--mova-fw-semi);
+  font-family: var(--mova-font-sans);
+}
+.mova-language-chip-flag {
+  font-size: 14px; line-height: 1;
+}
+.mova-language-chip[data-active="true"] {
+  background: var(--mova-indigo-soft);
+  color: var(--mova-indigo-ink);
+  border-color: rgba(79,70,229,.20);
+}
+
+.mova-difficulty-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--mova-sp-2);
+  border-radius: var(--mova-radius-1);
+  font-family: var(--mova-font-mono);
+  font-size: var(--mova-fs-micro);
+  font-weight: var(--mova-fw-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--mova-tracking-label);
+}
+.mova-difficulty-badge[data-level="A1"], .mova-difficulty-badge[data-level="A2"] { background: var(--mova-mint-soft);  color: var(--mova-mint-ink); }
+.mova-difficulty-badge[data-level="B1"], .mova-difficulty-badge[data-level="B2"] { background: var(--mova-amber-soft); color: var(--mova-amber-ink); }
+.mova-difficulty-badge[data-level="C1"], .mova-difficulty-badge[data-level="C2"] { background: var(--mova-coral-soft); color: var(--mova-coral-ink); }
+
+/* Filter chips at top of lesson search */
+.mova-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px var(--mova-sp-4);
+  border-radius: var(--mova-radius-full);
+  background: var(--mova-card);
+  border: 1px solid var(--mova-line-2);
+  color: var(--mova-ink-2);
+  font-size: var(--mova-fs-small);
+  font-weight: var(--mova-fw-semi);
+  cursor: pointer;
+  user-select: none;
+}
+.mova-chip[data-active="true"] {
+  background: var(--mova-ink);
+  border-color: var(--mova-ink);
+  color: #fff;
+}
+
+/* ---------- Icon tile (the colored gradient square behind big emojis) ---------- */
+
+.mova-icon-tile {
+  width: 56px; height: 56px;
+  border-radius: var(--mova-radius-3);
+  display: grid; place-items: center;
+  color: #fff;
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.18), var(--mova-shadow-1);
+  font-size: 26px;
+  flex-shrink: 0;
+}
+.mova-icon-tile-lg { width: 80px; height: 80px; border-radius: var(--mova-radius-4); font-size: 36px; }
+.mova-icon-tile-sm { width: 36px; height: 36px; border-radius: var(--mova-radius-2); font-size: 18px; }
+
+.mova-icon-tile[data-step="1"] { background: linear-gradient(135deg, var(--mova-step-1-from), var(--mova-step-1-to)); }
+.mova-icon-tile[data-step="2"] { background: linear-gradient(135deg, var(--mova-step-2-from), var(--mova-step-2-to)); }
+.mova-icon-tile[data-step="3"] { background: linear-gradient(135deg, var(--mova-step-3-from), var(--mova-step-3-to)); }
+.mova-icon-tile[data-step="4"] { background: linear-gradient(135deg, var(--mova-step-4-from), var(--mova-step-4-to)); }
+.mova-icon-tile[data-step="5"] { background: linear-gradient(135deg, var(--mova-step-5-from), var(--mova-step-5-to)); }
+.mova-icon-tile[data-step="6"] { background: linear-gradient(135deg, var(--mova-step-6-from), var(--mova-step-6-to)); }
+.mova-icon-tile[data-step="7"] { background: linear-gradient(135deg, var(--mova-step-7-from), var(--mova-step-7-to)); }
+.mova-icon-tile[data-step="8"] { background: linear-gradient(135deg, var(--mova-step-8-from), var(--mova-step-8-to)); }
+
+/* ---------- Microphone pulse ---------- */
+
+.mova-mic-pulse {
+  position: relative;
+  width: 88px; height: 88px;
+  border-radius: var(--mova-radius-full);
+  background: var(--mova-coral);
+  display: grid; place-items: center;
+  color: #fff;
+  font-size: 36px;
+  box-shadow: 0 6px 18px rgba(255,123,107,.4);
+  animation: mova-mic-pulse 1.4s var(--mova-ease) infinite;
+}
+.mova-mic-pulse svg, .mova-mic-pulse i { width: 36px; height: 36px; }
+
+@keyframes mova-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,123,107,.55), 0 6px 18px rgba(255,123,107,.4); }
+  50%      { box-shadow: 0 0 0 18px rgba(255,123,107,0), 0 6px 18px rgba(255,123,107,.4); }
+}
+
+/* ---------- Brand mark (the coral dot) ---------- */
+
+.mova-logo {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: var(--mova-font-sans);
+  font-weight: var(--mova-fw-black);
+  letter-spacing: var(--mova-tracking-display);
+  font-size: var(--mova-fs-display);
+  color: var(--mova-ink);
+  line-height: 1;
+}
+.mova-logo-dot { color: var(--mova-coral); }
+[data-theme="dark"] .mova-logo { color: var(--mova-ink); }
+
+/* ---------- Stepper (vertical onboarding) ---------- */
+
+.mova-stepper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mova-sp-5);
+}
+.mova-stepper-row {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: var(--mova-sp-4);
+  align-items: flex-start;
+}
+.mova-stepper-bullet {
+  width: 36px; height: 36px;
+  border-radius: var(--mova-radius-full);
+  display: grid; place-items: center;
+  background: var(--mova-surface-3);
+  color: var(--mova-ink-3);
+  font-family: var(--mova-font-mono);
+  font-weight: var(--mova-fw-bold);
+  font-size: 14px;
+  border: 2px solid transparent;
+}
+.mova-stepper-row[data-state="done"] .mova-stepper-bullet    { background: var(--mova-mint); color: #fff; }
+.mova-stepper-row[data-state="active"] .mova-stepper-bullet  { background: var(--mova-indigo); color: #fff; border-color: rgba(79,70,229,.25); }
+.mova-stepper-label { font-weight: var(--mova-fw-bold); color: var(--mova-ink); font-size: var(--mova-fs-h3); margin: 4px 0 4px; }
+.mova-stepper-help  { color: var(--mova-ink-3); font-size: var(--mova-fs-small); margin: 0 0 var(--mova-sp-3); }
+.mova-stepper-body  { padding-bottom: var(--mova-sp-4); border-bottom: 1px solid var(--mova-line); }
+.mova-stepper-row:last-child .mova-stepper-body { border-bottom: none; }
+
+/* ---------- Top header (used in every screen) ---------- */
+
+.mova-app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mova-sp-4);
+  padding: var(--mova-sp-5) 0 var(--mova-sp-4);
+  border-bottom: 1px solid var(--mova-line);
+  margin-bottom: var(--mova-sp-5);
+}
+.mova-app-header-user {
+  display: flex; align-items: center; gap: var(--mova-sp-3);
+  font-weight: var(--mova-fw-bold);
+  font-size: var(--mova-fs-body);
+  color: var(--mova-ink);
+}
+.mova-avatar {
+  width: 36px; height: 36px; border-radius: var(--mova-radius-full);
+  background: var(--mova-amber);
+  display: grid; place-items: center;
+  color: #fff; font-weight: var(--mova-fw-bold); font-size: 14px;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,.18);
+}
+.mova-icon-btn {
+  width: 40px; height: 40px;
+  border-radius: var(--mova-radius-2);
+  border: 1px solid var(--mova-line);
+  background: var(--mova-card);
+  display: grid; place-items: center;
+  color: var(--mova-ink-2);
+  cursor: pointer;
+}
+.mova-icon-btn:hover { background: var(--mova-surface-2); border-color: var(--mova-line-2); }
+
+/* ---------- Phrase row table (used in shadowing / speed translate) ---------- */
+
+.mova-phrase-table {
+  display: flex; flex-direction: column;
+  background: var(--mova-card);
+  border: 1px solid var(--mova-line);
+  border-radius: var(--mova-radius-3);
+  overflow: hidden;
+}
+.mova-phrase-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: var(--mova-sp-3);
+  padding: var(--mova-sp-3) var(--mova-sp-4);
+  border-bottom: 1px solid var(--mova-line);
+}
+.mova-phrase-row:last-child { border-bottom: none; }
+.mova-phrase-row:nth-child(even) { background: var(--mova-surface-2); }
+.mova-phrase-num    { font-family: var(--mova-font-mono); font-size: var(--mova-fs-small); color: var(--mova-ink-3); }
+.mova-phrase-native { font-size: var(--mova-fs-body); color: var(--mova-ink); font-weight: var(--mova-fw-semi); }
+.mova-phrase-target { font-size: var(--mova-fs-small); color: var(--mova-ink-2); margin-top: 2px; }
+.mova-phrase-status { font-size: var(--mova-fs-small); }
+.mova-phrase-status[data-state="ok"]   { color: var(--mova-mint-ink); }
+.mova-phrase-status[data-state="warn"] { color: var(--mova-amber-ink); }
+.mova-phrase-status[data-state="todo"] { color: var(--mova-ink-3); }
+
+/* ---------- Letter card (Aa with IPA) ---------- */
+
+.mova-letter-card {
+  background: var(--mova-card);
+  border: 1px solid var(--mova-line);
+  border-radius: var(--mova-radius-4);
+  padding: var(--mova-sp-5);
+  text-align: center;
+  display: flex; flex-direction: column; gap: var(--mova-sp-2);
+  box-shadow: var(--mova-shadow-1);
+}
+.mova-letter-glyph {
+  font-size: 64px;
+  font-weight: var(--mova-fw-black);
+  letter-spacing: var(--mova-tracking-display);
+  color: var(--mova-ink);
+  line-height: 1;
+}
+.mova-letter-ipa {
+  font-family: var(--mova-font-mono);
+  font-size: var(--mova-fs-small);
+  color: var(--mova-indigo);
+}
+.mova-letter-example {
+  font-size: var(--mova-fs-small);
+  color: var(--mova-ink-2);
+}
+
+/* ---------- Mono labels ---------- */
+.mova-mono { font-family: var(--mova-font-mono); }
+.mova-eyebrow {
+  font-family: var(--mova-font-mono);
+  font-size: var(--mova-fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--mova-tracking-label);
+  color: var(--mova-ink-3);
+}
+
+/* ---------- Faux Streamlit widgets (for static HTML preview only) ----------
+   These mirror what the real Streamlit widgets look like AFTER
+   streamlit-overrides.css is applied. Use them inside the .html
+   screens so the static preview matches the running app.
+*/
+
+.mova-fauxlit-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--mova-font-sans);
+  font-weight: var(--mova-fw-bold);
+  font-size: var(--mova-fs-body);
+  border-radius: var(--mova-radius-2);
+  min-height: 48px;
+  padding: 0 var(--mova-sp-5);
+  border: 1px solid transparent;
+  cursor: pointer;
+  gap: var(--mova-sp-2);
+  text-decoration: none;
+  transition: all var(--mova-dur-2) var(--mova-ease);
+}
+.mova-fauxlit-btn-primary {
+  background: var(--mova-coral); color: #fff;
+  box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 2px 6px rgba(255,123,107,.28);
+}
+.mova-fauxlit-btn-primary:hover  { background: var(--mova-coral-press); }
+.mova-fauxlit-btn-secondary {
+  background: var(--mova-card); color: var(--mova-ink);
+  border-color: var(--mova-line-2);
+  box-shadow: var(--mova-shadow-1);
+}
+.mova-fauxlit-btn-secondary:hover { background: var(--mova-surface-3); }
+.mova-fauxlit-btn-full { width: 100%; }
+.mova-fauxlit-btn-danger {
+  background: var(--mova-card); color: var(--mova-coral-ink);
+  border-color: var(--mova-coral-soft);
+}
+
+.mova-fauxlit-input {
+  display: flex; align-items: center;
+  background: var(--mova-card);
+  border: 1px solid var(--mova-line-2);
+  border-radius: var(--mova-radius-2);
+  min-height: 48px;
+  padding: 0 var(--mova-sp-4);
+  font-family: var(--mova-font-sans);
+  font-size: var(--mova-fs-body);
+  color: var(--mova-ink);
+  gap: var(--mova-sp-2);
+  width: 100%;
+  box-sizing: border-box;
+}
+.mova-fauxlit-input[data-state="focus"] { border-color: var(--mova-indigo); box-shadow: var(--mova-shadow-focus); }
+.mova-fauxlit-input-icon { color: var(--mova-ink-3); }
+.mova-fauxlit-input-placeholder { color: var(--mova-ink-3); }
+
+.mova-fauxlit-textarea {
+  display: block; width: 100%; box-sizing: border-box;
+  background: var(--mova-card);
+  border: 1px solid var(--mova-line-2);
+  border-radius: var(--mova-radius-2);
+  font-family: var(--mova-font-sans);
+  font-size: var(--mova-fs-body);
+  line-height: var(--mova-lh-body);
+  color: var(--mova-ink);
+  padding: var(--mova-sp-3) var(--mova-sp-4);
+  min-height: 132px;
+}
+
+.mova-fauxlit-label {
+  font-weight: var(--mova-fw-semi);
+  font-size: var(--mova-fs-small);
+  color: var(--mova-ink);
+  display: block;
+  margin-bottom: var(--mova-sp-2);
+}
+.mova-fauxlit-help {
+  color: var(--mova-ink-3);
+  font-size: var(--mova-fs-small);
+  margin-top: var(--mova-sp-2);
+}
+
+.mova-fauxlit-radio {
+  display: flex; flex-direction: column; gap: var(--mova-sp-2);
+}
+.mova-fauxlit-radio-opt {
+  display: flex; align-items: center; gap: var(--mova-sp-3);
+  padding: var(--mova-sp-3) var(--mova-sp-4);
+  background: var(--mova-card);
+  border: 1px solid var(--mova-line);
+  border-radius: var(--mova-radius-2);
+  min-height: 56px;
+  cursor: pointer;
+}
+.mova-fauxlit-radio-opt[data-checked="true"] {
+  border-color: var(--mova-indigo);
+  background: var(--mova-indigo-soft);
+}
+.mova-fauxlit-radio-dot {
+  width: 18px; height: 18px; border-radius: var(--mova-radius-full);
+  border: 2px solid var(--mova-ink-3);
+  flex-shrink: 0;
+  display: grid; place-items: center;
+}
+.mova-fauxlit-radio-opt[data-checked="true"] .mova-fauxlit-radio-dot {
+  border-color: var(--mova-indigo);
+}
+.mova-fauxlit-radio-opt[data-checked="true"] .mova-fauxlit-radio-dot::after {
+  content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--mova-indigo);
+}
+.mova-fauxlit-radio-label { font-weight: var(--mova-fw-semi); color: var(--mova-ink); font-size: var(--mova-fs-body); }
+.mova-fauxlit-radio-help  { color: var(--mova-ink-3); font-size: var(--mova-fs-small); display: block; margin-top: 2px; }
+
+/* Sidebar (left nav) faux */
+.mova-fauxlit-sidebar {
+  width: var(--mova-sidebar-w);
+  flex-shrink: 0;
+  background: var(--mova-card);
+  border-right: 1px solid var(--mova-line);
+  padding: var(--mova-sp-6) var(--mova-sp-4);
+  display: flex; flex-direction: column; gap: var(--mova-sp-5);
+  min-height: 100%;
+}
+.mova-fauxlit-sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+.mova-fauxlit-sidebar-link {
+  display: flex; align-items: center; gap: var(--mova-sp-3);
+  padding: var(--mova-sp-3) var(--mova-sp-4);
+  border-radius: var(--mova-radius-2);
+  font-weight: var(--mova-fw-semi);
+  font-size: var(--mova-fs-body);
+  color: var(--mova-ink-2);
+  text-decoration: none;
+  cursor: pointer;
+}
+.mova-fauxlit-sidebar-link[data-active="true"] {
+  background: var(--mova-indigo-soft);
+  color: var(--mova-indigo-ink);
+}
+.mova-fauxlit-sidebar-link:hover { background: var(--mova-surface-2); }
+.mova-fauxlit-sidebar-section {
+  font-family: var(--mova-font-mono);
+  font-size: var(--mova-fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--mova-tracking-label);
+  color: var(--mova-ink-3);
+  padding: 0 var(--mova-sp-4);
+}
+
+/* Generic icon glyphs (use SVG inline) */
+.mova-glyph { width: 20px; height: 20px; flex-shrink: 0; }
+.mova-glyph-lg { width: 28px; height: 28px; }

@@ -1,0 +1,14 @@
+[theme]
+# Mova design system — light theme.
+# Matches tokens.css so Streamlit's native widgets render in the right
+# colors BEFORE our CSS overrides even kick in (no flash of dark UI).
+base                       = "light"
+primaryColor               = "#FF7B6B"   # Mova coral — primary CTA
+backgroundColor            = "#FAF7F5"   # Mova surface — page bg
+secondaryBackgroundColor   = "#F4F0EB"   # Mova surface-2 — chips, sidebar
+textColor                  = "#1B1730"   # Mova ink — primary text
+font                       = "sans serif"
+
+[server]
+# Streamlit Cloud picks these up from secrets; this is a safe local default.
+headless = true
