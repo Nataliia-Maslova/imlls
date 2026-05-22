@@ -1171,13 +1171,17 @@ def render_setup():
             with _sc1:
                 if st.button("◀ Попередній", key="r_sb_prev",
                              use_container_width=True, disabled=(_cur <= 0)):
-                    st.session_state[_idx_key] = _cur - 1
+                    _new = _cur - 1
+                    st.session_state[_idx_key] = _new
+                    st.session_state["r_lesson_sel"] = _sb_lids[_new]
                     st.rerun()
             with _sc2:
                 if st.button("Наступний ▶", key="r_sb_next",
                              use_container_width=True,
                              disabled=(_cur >= len(_sb_lids) - 1)):
-                    st.session_state[_idx_key] = _cur + 1
+                    _new = _cur + 1
+                    st.session_state[_idx_key] = _new
+                    st.session_state["r_lesson_sel"] = _sb_lids[_new]
                     st.rerun()
         except Exception:
             pass
