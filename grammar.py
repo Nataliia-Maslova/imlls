@@ -27,6 +27,7 @@ from engine.tts     import get_audio_path
 from engine.stt      import transcribe_bytes, whisper_available
 from engine.logger  import SessionLogger, get_last_lesson, get_progress, save_progress
 from engine.gec import correct as gec_correct, gec_available
+from engine.gamification import on_step_complete, on_lesson_complete, sidebar_widget
 from engine import i18n
 
 # Prefer the workbook with lesson titles (topic_en / topic_uk columns) if it
@@ -969,6 +970,23 @@ def render_complete(session: LessonSession):
     if not st.session_state.get("_progress_saved"):
         session.complete()
         st.session_state["_progress_saved"] = True
+        # ── Award lesson-completion XP + update streak ────────────────────
+        try:
+            _llang = {"English":"en","Ukrainian":"uk","Spanish":"es","Korean":"ko"}.get(st.session_state.get("launcher_native","English"),"en")
+            _lres = on_lesson_complete(session.state.user_id, _llang)
+            _ltoasts = [f"🎉 Урок завершено! +{_lres['xp_earned']} XP бонус"]
+            if _lres.get("leveled_up"):
+                _ltoasts.append(f"⭐ Новий рівень {_lres['level_num']}: {_lres['level_name']}!")
+            for _bid, _bem, _bname, _bdesc in _lres.get("new_badges", []):
+                _ltoasts.append(f"{_bem} Бейдж «{_bname}»: {_bdesc}!")
+            streak = _lres.get("streak_current", 0)
+            if streak > 1:
+                _ltoasts.append(f"🔥 Серія {streak} {'день' if streak == 1 else 'днів'}!")
+            st.session_state["_pending_toasts"] = (
+                st.session_state.get("_pending_toasts", []) + _ltoasts
+            )
+        except Exception:
+            pass
 
     module = _current_module()
     c1, c2, c3 = st.columns(3)
@@ -1457,6 +1475,12 @@ def main(module: str = "grammar"):
     _inject_css()
 
     with st.sidebar:
+        # ── Gamification widget (streak / XP / level) ────────────────────────
+        _gami_user = (st.session_state["session"].state.user_id
+                      if "session" in st.session_state else
+                      st.session_state.get("launcher_user", "student1"))
+        sidebar_widget(_gami_user)
+
         # ── Module navigator ─────────────────────────────────────────────────
         _SIDEBAR_MODULES = [
             ("grammar", "🗣️", "Grammar"),
@@ -1656,10 +1680,29 @@ def main(module: str = "grammar"):
     # Auto-save progress on every step (deduped by (lesson_id, step))
     _save_step_progress(sess, step)
 
+    # ── Show pending gamification toasts (queued after rerun) ────────────────
+    for _toast_msg in st.session_state.pop("_pending_toasts", []):
+        st.toast(_toast_msg, icon="🎉")
+
     fn = STEPS.get(step)
     if fn:
         done = fn(sess, tts, wh)
         if done:
+            # ── Award XP for completed step ──────────────────────────────────
+            try:
+                _sim = float(st.session_state.get("_last_similarity", 0.0))
+                _lang = {"English":"en","Ukrainian":"uk","Spanish":"es","Korean":"ko"}.get(st.session_state.get("launcher_native","English"),"en")
+                _gres = on_step_complete(sess.state.user_id, step, _sim, _lang)
+                _toasts = []
+                if _gres.get("leveled_up"):
+                    _toasts.append(f"⭐ Новий рівень {_gres['level_num']}: {_gres['level_name']}! +{_gres['xp_earned']} XP")
+                for _bid, _bem, _bname, _bdesc in _gres.get("new_badges", []):
+                    _toasts.append(f"{_bem} Бейдж «{_bname}»: {_bdesc}!")
+                if not _gres.get("leveled_up") and not _gres.get("new_badges"):
+                    _toasts.append(f"⭐ +{_gres['xp_earned']} XP")
+                st.session_state["_pending_toasts"] = _toasts
+            except Exception:
+                pass
             _clear_lesson()
             st.session_state["lesson_step"] = step + 1
             st.rerun()

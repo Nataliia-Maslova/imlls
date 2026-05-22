@@ -128,6 +128,12 @@ try:
 except Exception:
     LOGGER_OK = False
 
+try:
+    from engine.gamification import on_step_complete, on_lesson_complete, sidebar_widget as _gami_sidebar
+    GAMI_OK = True
+except Exception:
+    GAMI_OK = False
+
 
 def _save_step_progress(lesson_id: int, step: int, user_id: str):
     """Persist current (lesson_id, step) so user can resume here next time.
@@ -1401,6 +1407,8 @@ def main():
 
     with st.sidebar:
         _render_module_nav_sidebar("reading")
+        if GAMI_OK:
+            _gami_sidebar(cur_user)
         st.markdown("**🔤 Reading**")
         all_l    = sorted(df["lesson_id"].unique())
         lid      = st.session_state.get("r_lesson", 1)
@@ -1517,6 +1525,24 @@ def main():
                 st.session_state["_r_progress_saved"] = True
             except Exception as e:
                 print(f"[reading_app] save_progress failed: {e}")
+        if GAMI_OK and not st.session_state.get("_r_gami_lesson_saved"):
+            try:
+                _rllang = {"English":"en","Ukrainian":"uk","Spanish":"es","Korean":"ko"}.get(st.session_state.get("launcher_native","English"),"en")
+                _lres = on_lesson_complete(cur_user, _rllang)
+                _ltoasts = [f"🎉 Урок завершено! +{_lres['xp_earned']} XP бонус"]
+                if _lres.get("leveled_up"):
+                    _ltoasts.append(f"⭐ Новий рівень {_lres['level_num']}: {_lres['level_name']}!")
+                for _bid, _bem, _bname, _bdesc in _lres.get("new_badges", []):
+                    _ltoasts.append(f"{_bem} Бейдж «{_bname}»: {_bdesc}!")
+                _streak = _lres.get("streak_current", 0)
+                if _streak > 1:
+                    _ltoasts.append(f"🔥 Серія {_streak} днів!")
+                st.session_state["_pending_r_toasts"] = (
+                    st.session_state.get("_pending_r_toasts", []) + _ltoasts
+                )
+                st.session_state["_r_gami_lesson_saved"] = True
+            except Exception:
+                pass
 
         st.markdown("""
         <div style="background:linear-gradient(135deg, var(--mova-mint-soft), var(--mova-indigo-soft));
@@ -1531,6 +1557,7 @@ def main():
                 st.session_state["r_step"] = 1
                 st.session_state.pop("_r_progress_saved", None)
                 st.session_state.pop("_r_last_saved_progress", None)
+                st.session_state.pop("_r_gami_lesson_saved", None)
                 st.rerun()
         with c2:
             if st.button("📚 Новий урок", use_container_width=True):
@@ -1538,10 +1565,28 @@ def main():
                 st.rerun()
         return
 
+    # ── Show pending gamification toasts ────────────────────────────────────
+    for _toast_msg in st.session_state.pop("_pending_r_toasts", []):
+        st.toast(_toast_msg, icon="🎉")
+
     fn   = STEP_FNS.get(step)
     done = fn(rows) if fn else True
 
     if done:
+        if GAMI_OK:
+            try:
+                _rlang = {"English":"en","Ukrainian":"uk","Spanish":"es","Korean":"ko"}.get(st.session_state.get("launcher_native","English"),"en")
+                _sres = on_step_complete(cur_user, step, 0.0, _rlang)
+                _stoasts = []
+                if _sres.get("leveled_up"):
+                    _stoasts.append(f"⭐ Новий рівень {_sres['level_num']}: {_sres['level_name']}! +{_sres['xp_earned']} XP")
+                for _bid, _bem, _bname, _bdesc in _sres.get("new_badges", []):
+                    _stoasts.append(f"{_bem} Бейдж «{_bname}»: {_bdesc}!")
+                if not _sres.get("leveled_up") and not _sres.get("new_badges"):
+                    _stoasts.append(f"⭐ +{_sres['xp_earned']} XP")
+                st.session_state["_pending_r_toasts"] = _stoasts
+            except Exception:
+                pass
         clear_step_state()
         st.session_state["r_step"] = step + 1
         st.rerun()
