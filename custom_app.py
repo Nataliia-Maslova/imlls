@@ -41,6 +41,49 @@ def _inject_css():
 def render_setup():
     _inject_css()
 
+    # ── Sidebar: always visible on setup screen ───────────────────────────────
+    _MODS = [
+        ("grammar", "🗣️", "Grammar"),
+        ("vocab",   "📖", "Vocabulary"),
+        ("reading", "🔤", "Reading"),
+        ("custom",  "📝", "My Phrases"),
+    ]
+    with st.sidebar:
+        st.markdown(
+            '<div style="font-size:.7rem;color:var(--mova-ink-3);'
+            'text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">'
+            'Module</div>',
+            unsafe_allow_html=True,
+        )
+        for _mk, _mi, _mn in _MODS:
+            _active = (_mk == "custom")
+            if st.button(
+                f"{_mi} {_mn}",
+                key=f"cu_sb_{_mk}",
+                use_container_width=True,
+                type="primary" if _active else "secondary",
+                disabled=_active,
+            ):
+                _u = st.session_state.get("launcher_user", "student1")
+                _n = st.session_state.get("launcher_native", "Ukrainian")
+                _t = st.session_state.get("launcher_target", "English")
+                for _k in list(st.session_state):
+                    del st.session_state[_k]
+                st.session_state.update({
+                    "active_module":   _mk,
+                    "launcher_user":   _u,
+                    "launcher_native": _n,
+                    "launcher_target": _t,
+                })
+                st.query_params["module"] = _mk
+                st.rerun()
+        st.markdown("---")
+        if st.button("🏠 Main menu", key="cu_setup_home"):
+            for _k in list(st.session_state):
+                del st.session_state[_k]
+            st.query_params.clear()
+            st.rerun()
+
     st.markdown("""
     <div style="text-align:center;padding:36px 0 18px">
       <div style="font-size:3rem">📝</div>

@@ -1111,7 +1111,54 @@ def clear_all():
 #  Setup screen
 # ═══════════════════════════════════════════════════════════════════════════
 
+def _render_module_nav_sidebar(current_module: str) -> None:
+    """Render the module-switcher sidebar (shared by setup and active-lesson views)."""
+    _MODS = [
+        ("grammar", "🗣️", "Grammar"),
+        ("vocab",   "📖", "Vocabulary"),
+        ("reading", "🔤", "Reading"),
+        ("custom",  "📝", "My Phrases"),
+    ]
+    st.markdown(
+        '<div style="font-size:.7rem;color:var(--mova-ink-3);'
+        'text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">'
+        'Module</div>',
+        unsafe_allow_html=True,
+    )
+    for _mk, _mi, _mn in _MODS:
+        _active = (_mk == current_module)
+        if st.button(
+            f"{_mi} {_mn}",
+            key=f"sb_nav_{_mk}",
+            use_container_width=True,
+            type="primary" if _active else "secondary",
+            disabled=_active,
+        ):
+            _u = st.session_state.get("launcher_user", "student1")
+            _n = st.session_state.get("launcher_native", "Ukrainian")
+            _t = st.session_state.get("launcher_target", "English")
+            for _k in list(st.session_state):
+                del st.session_state[_k]
+            st.session_state.update({
+                "active_module":   _mk,
+                "launcher_user":   _u,
+                "launcher_native": _n,
+                "launcher_target": _t,
+            })
+            st.query_params["module"] = _mk
+            st.rerun()
+    st.markdown("---")
+
+
 def render_setup():
+    with st.sidebar:
+        _render_module_nav_sidebar("reading")
+        if st.button("🏠 Main menu", key="r_setup_home"):
+            for _k in list(st.session_state):
+                del st.session_state[_k]
+            st.query_params.clear()
+            st.rerun()
+
     st.markdown("""
     <div style="text-align:center;padding:36px 0 20px">
       <div style="font-size:3rem">📖</div>
@@ -1308,6 +1355,7 @@ def main():
         _save_step_progress(cur_lesson, step, cur_user)
 
     with st.sidebar:
+        _render_module_nav_sidebar("reading")
         st.markdown("**🔤 Reading**")
         all_l    = sorted(df["lesson_id"].unique())
         lid      = st.session_state.get("r_lesson", 1)
@@ -1383,6 +1431,27 @@ def main():
                          use_container_width=True, key="r_nav_go"):
                 clear_step_state()
                 st.session_state["r_step"] = jump_to
+                st.rerun()
+
+        # ── Jump to lesson ────────────────────────────────────────────────────
+        st.caption("Перейти до уроку")
+        _jump_lid = st.selectbox(
+            "lesson_jump_sel_r",
+            options=all_l,
+            index=all_l.index(lid) if lid in all_l else 0,
+            format_func=lambda l: f"Урок {l}",
+            key="sb_r_jump_lid",
+            label_visibility="collapsed",
+        )
+        if _jump_lid != lid:
+            if st.button(
+                f"Перейти до уроку {_jump_lid}",
+                use_container_width=True,
+                key="sb_r_go_lid",
+            ):
+                clear_step_state()
+                st.session_state["r_lesson"] = _jump_lid
+                st.session_state["r_step"]   = 1
                 st.rerun()
 
         st.markdown("---")

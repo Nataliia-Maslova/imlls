@@ -1457,6 +1457,41 @@ def main(module: str = "grammar"):
     _inject_css()
 
     with st.sidebar:
+        # ── Module navigator ─────────────────────────────────────────────────
+        _SIDEBAR_MODULES = [
+            ("grammar", "🗣️", "Grammar"),
+            ("vocab",   "📖", "Vocabulary"),
+            ("reading", "🔤", "Reading"),
+            ("custom",  "📝", "My Phrases"),
+        ]
+        st.markdown(
+            '<div style="font-size:.7rem;color:var(--mova-ink-3);'
+            'text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">'
+            'Module</div>',
+            unsafe_allow_html=True,
+        )
+        for _mod_key, _mod_icon, _mod_name in _SIDEBAR_MODULES:
+            _is_current = (module == _mod_key)
+            if st.button(
+                f"{_mod_icon} {_mod_name}",
+                key=f"sb_mod_{_mod_key}",
+                use_container_width=True,
+                type="primary" if _is_current else "secondary",
+                disabled=_is_current,
+            ):
+                _u = st.session_state.get("launcher_user", "student1")
+                _n = st.session_state.get("launcher_native", "Ukrainian")
+                _t = st.session_state.get("launcher_target", "English")
+                for _k in list(st.session_state):
+                    del st.session_state[_k]
+                st.session_state["active_module"]   = _mod_key
+                st.session_state["launcher_user"]   = _u
+                st.session_state["launcher_native"] = _n
+                st.session_state["launcher_target"] = _t
+                st.query_params["module"] = _mod_key
+                st.rerun()
+
+        st.markdown("---")
         st.markdown(f"**{cfg['icon']} {cfg['label']}**")
         if "lesson_step" in st.session_state and "session" in st.session_state:
             sess  = st.session_state["session"]
@@ -1538,7 +1573,7 @@ def main(module: str = "grammar"):
                 "Jump to step",
                 options=list(range(1, 9)),
                 index=jump_default,
-                format_func=lambda s: f"Step {s}" + (" 🔒" if s in REQUIRED_STEPS else ""),
+                format_func=lambda s: f"Step {s}" + (" \U0001f512" if s in REQUIRED_STEPS else ""),
                 key="nav_jump",
             )
             if jump_to != cur_step:
@@ -1549,8 +1584,52 @@ def main(module: str = "grammar"):
                     st.session_state["lesson_step"] = jump_to
                     st.rerun()
 
+            # \u2500\u2500 Jump to lesson \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+            if module != "custom":
+                st.markdown("---")
+                st.caption("Jump to lesson")
+                try:
+                    _df_jmp = cfg["load"](str(cfg["db_path"]),
+                                          state.native_lang, state.target_lang)
+                    _all_lids = cfg["get_lessons"](_df_jmp)
+                    _cur_idx  = (_all_lids.index(state.lesson_id)
+                                 if state.lesson_id in _all_lids else 0)
+                    _jump_lid = st.selectbox(
+                        "lesson_jump_sel",
+                        options=_all_lids,
+                        index=_cur_idx,
+                        format_func=lambda lid: f"{cfg['lesson_word']} {lid}",
+                        key="sb_jump_lid",
+                        label_visibility="collapsed",
+                    )
+                    if _jump_lid != state.lesson_id:
+                        if st.button(
+                            f"Go to {cfg['lesson_word']} {_jump_lid}",
+                            use_container_width=True,
+                            key="sb_go_lid",
+                        ):
+                            _ldf = cfg["get_lesson"](_df_jmp, _jump_lid)
+                            _lp  = (f"{WHISPER_LANG.get(state.native_lang,'?')}"
+                                    f"-{WHISPER_LANG.get(state.target_lang,'?')}"
+                                    f"-{cfg['lang_suffix']}")
+                            _clear_lesson()
+                            st.session_state.pop("_progress_saved", None)
+                            st.session_state.update({
+                                "session":     LessonSession(
+                                                   state.user_id, _ldf, _jump_lid,
+                                                   state.native_lang, state.target_lang,
+                                                   language_pair=_lp),
+                                "lesson_step": 1,
+                                "tts_lang":    TTS_LANG.get(state.target_lang, "en"),
+                                "wh_lang":     WHISPER_LANG.get(state.target_lang),
+                                "lang_pair":   _lp,
+                            })
+                            st.rerun()
+                except Exception:
+                    pass
+
             st.markdown("---")
-        if st.button("🏠 Main menu"):
+        if st.button("\U0001f3e0 Main menu"):
             _clear_all()
             st.rerun()
 
@@ -1584,5 +1663,5 @@ def main(module: str = "grammar"):
             _clear_lesson()
             st.session_state["lesson_step"] = step + 1
             st.rerun()
-        # Optional steps already expose their own "Continue → / Done → / Skip →"
+        # Optional steps already expose their own "Continue \u2192 / Done \u2192 / Skip \u2192"
         # button inside the step body, so no global skip button
