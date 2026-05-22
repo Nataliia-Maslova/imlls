@@ -832,6 +832,11 @@ def do_step1(rows: pd.DataFrame) -> bool:
 
 def do_step2(rows: pd.DataFrame) -> bool:
     shdr(2)
+    st.markdown(
+        '<div style="color:var(--mova-ink-2);font-size:.9rem;margin:-6px 0 14px">'
+        'Запиши себе вголос і перевір вимову — або просто прочитай очима і натисни Далі.</div>',
+        unsafe_allow_html=True,
+    )
 
     scores = st.session_state.get("s2_scores", {})
 
@@ -839,17 +844,8 @@ def do_step2(rows: pd.DataFrame) -> bool:
     if rule_txt:
         st.markdown(f'<div class="rule">📖 {rule_txt}</div>', unsafe_allow_html=True)
 
-    # All words + transcription on screen
-    lessons_table(rows, show_word=True, show_trans=True, scores=scores)
-
-    # Next button ABOVE the mic so users can skip without scrolling
-    if st.button("Далі →", use_container_width=True, key="s2_next"):
-        return True
-
-    # Expected string: words joined by ". " so Whisper hears separate utterances
+    # ── Mic ABOVE phrases ────────────────────────────────────────────────────
     expected = ". ".join(str(r["word"]).strip() for _, r in rows.iterrows())
-
-    st.markdown("#### 🎙️ Прочитай вголос всі слова — запиши себе")
     audio = mic("s2")
 
     if not STT_OK or not SCORER_OK:
@@ -866,7 +862,6 @@ def do_step2(rows: pd.DataFrame) -> bool:
             with st.spinner("Розпізнаємо мовлення..."):
                 r = score_audio(audio, expected)
             if r:
-                # Mark every row with the same overall score (whole-recording match)
                 scores = {i: r for i in range(len(rows))}
                 st.session_state["s2_scores"] = scores
                 color = "var(--mova-mint)" if r["passed"] else "var(--mova-coral-ink)"
@@ -882,6 +877,13 @@ def do_step2(rows: pd.DataFrame) -> bool:
                 st.rerun()
             else:
                 st.error("Не вдалося розпізнати аудіо.")
+
+    # ── Phrases table BELOW mic ───────────────────────────────────────────────
+    lessons_table(rows, show_word=True, show_trans=True, scores=scores)
+
+    # ── Далі at the very bottom ───────────────────────────────────────────────
+    if st.button("Далі →", use_container_width=True, key="s2_next"):
+        return True
     return False
 
 
@@ -1500,7 +1502,8 @@ def main():
         clear_step_state()
         st.session_state["r_step"] = step + 1
         st.rerun()
-    elif step not in REQUIRED:
+    elif step not in REQUIRED and step != 4:
+        # Step 4 has its own "Пропустити" button inside do_step4; don't duplicate it.
         st.markdown("---")
         if st.button(f"⏭ Пропустити крок {step}", key=f"skip_global_{step}"):
             clear_step_state()
