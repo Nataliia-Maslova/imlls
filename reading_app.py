@@ -1155,6 +1155,33 @@ def _render_module_nav_sidebar(current_module: str) -> None:
 def render_setup():
     with st.sidebar:
         _render_module_nav_sidebar("reading")
+        # ── Lesson ◀ ▶ navigation ─────────────────────────────────────
+        try:
+            _sb_lang   = st.session_state.get("r_lang", "en")
+            _sb_native = st.session_state.get("launcher_native", "Ukrainian")
+            _sb_df     = load(str(DB_PATH), lang=_sb_lang, native_lang=_sb_native)
+            _sb_lids   = sorted(_sb_df["lesson_id"].unique())
+            _idx_key   = "r_setup_sel_idx"
+            if _idx_key not in st.session_state:
+                st.session_state[_idx_key] = 0
+            _cur = min(int(st.session_state[_idx_key]), len(_sb_lids) - 1)
+            st.markdown("---")
+            st.caption(f"Урок {_sb_lids[_cur]} / {len(_sb_lids)}")
+            _sc1, _sc2 = st.columns(2)
+            with _sc1:
+                if st.button("◀ Попередній", key="r_sb_prev",
+                             use_container_width=True, disabled=(_cur <= 0)):
+                    st.session_state[_idx_key] = _cur - 1
+                    st.rerun()
+            with _sc2:
+                if st.button("Наступний ▶", key="r_sb_next",
+                             use_container_width=True,
+                             disabled=(_cur >= len(_sb_lids) - 1)):
+                    st.session_state[_idx_key] = _cur + 1
+                    st.rerun()
+        except Exception:
+            pass
+        st.markdown("---")
         if st.button("🏠 Main menu", key="r_setup_home"):
             for _k in list(st.session_state):
                 del st.session_state[_k]
@@ -1225,11 +1252,23 @@ def render_setup():
                 resume_step = max(1, min(5, saved_step))
                 resume_msg  = f"⏯ Повернешся до уроку {saved_lesson} на крок {resume_step}"
 
+    # Sync selectbox index with session state (kept in sync with sidebar ◀ ▶)
+    _idx_key = "r_setup_sel_idx"
+    if (_idx_key not in st.session_state
+            or st.session_state.get("_r_setup_lang") != chosen_lang):
+        st.session_state[_idx_key]      = default_idx
+        st.session_state["_r_setup_lang"] = chosen_lang
+    _cur_idx = min(int(st.session_state[_idx_key]), len(lessons) - 1)
     lesson_id = st.selectbox(
         "📚 Урок", lessons,
-        index=default_idx,
+        index=_cur_idx,
         format_func=lambda x: f"Урок {x} — {len(df[df['lesson_id']==x])} рядків",
+        key="r_lesson_sel",
     )
+    # If user changed selectbox manually, sync back to session state
+    _sel_idx = lessons.index(lesson_id)
+    if _sel_idx != _cur_idx:
+        st.session_state[_idx_key] = _sel_idx
 
     rows = df[df["lesson_id"] == lesson_id].reset_index(drop=True)
     has_trans = chosen_lang != "ko"  # Korean has no transcription
