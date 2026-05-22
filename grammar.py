@@ -1319,6 +1319,7 @@ def _clear_lesson():
 
 def _clear_all():
     for k in list(st.session_state): del st.session_state[k]
+    st.query_params.clear()
 
 
 def _save_step_progress(sess: LessonSession, step: int):

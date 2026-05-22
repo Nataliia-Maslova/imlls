@@ -135,7 +135,7 @@ MODULES = {
     "reading": {
         "label":       "Reading",
         "icon":        "🔤",
-        "tagline":     "English phonics - 80 lessons with IPA audio",
+        "tagline":     "Learn to read with IPA audio",
         "color_from":  "var(--mova-card)",
         "color_to":    "var(--mova-card)",
     },
@@ -173,13 +173,11 @@ def _count_vocab_lessons(native: str, target: str) -> int:
 
 
 @st.cache_data(show_spinner=False)
-def _count_reading_lessons() -> int:
-    """Total reading lessons available (Reading is English-only)."""
+def _count_reading_lessons(lang: str = "en") -> int:
+    """Total reading lessons available for the given language sheet."""
     try:
         import pandas as pd
-        df = pd.read_excel(str(DB_READING), engine="openpyxl",
-                           sheet_name="Все уроки")
-        # Excel column 1 is lesson_id (matches reading_app.load)
+        df = pd.read_excel(str(DB_READING), engine="openpyxl", sheet_name=lang)
         return int(df.iloc[:, 0].nunique())
     except Exception:
         return 0
@@ -227,8 +225,11 @@ def _module_progress_card(module_key: str, native: str, target: str,
                           user_id: str) -> dict:
     """Returns the progress info to render on a module card."""
     if module_key == "reading":
-        total = _count_reading_lessons()
-        lang_pair = "en-reading"
+        # Reading progress is tracked per chosen language (r_lang in session)
+        import streamlit as _st
+        r_lang = _st.session_state.get("r_lang", "en")
+        total = _count_reading_lessons(lang=r_lang)
+        lang_pair = f"{r_lang}-reading"
         word = "Lesson"
     elif module_key == "grammar":
         total = _count_grammar_lessons(native, target)
@@ -421,6 +422,7 @@ def _switch_to(module_key: str):
     st.session_state["launcher_user"]   = user
     st.session_state["launcher_native"] = native
     st.session_state["launcher_target"] = target
+    st.query_params["module"] = module_key
     st.rerun()
 
 
@@ -443,8 +445,17 @@ def main():
         st.session_state["launcher_user"]   = user
         st.session_state["launcher_native"] = native
         st.session_state["launcher_target"] = target
+        st.query_params.clear()
         render_launcher()
         return
+
+    # Restore module from URL query param (enables browser back/forward)
+    qp_module = st.query_params.get("module")
+    if qp_module and not st.session_state.get("active_module"):
+        st.session_state["active_module"] = qp_module
+    elif st.session_state.get("active_module") and not qp_module:
+        # Session has module but URL doesn't — keep session as truth, update URL
+        st.query_params["module"] = st.session_state["active_module"]
 
     active = st.session_state.get("active_module")
 
@@ -457,6 +468,16 @@ def main():
     elif active == "vocab":
         grammar_app.main(module="vocab")
     elif active == "reading":
+        # Sync launcher target language → reading language code (only if not yet set)
+        _TARGET_TO_RLANG = {
+            "English":   "en",
+            "Ukrainian": "uk",
+            "Spanish":   "es",
+            "Korean":    "ko",
+        }
+        _target = st.session_state.get("launcher_target", "English")
+        if "r_lang" not in st.session_state:
+            st.session_state["r_lang"] = _TARGET_TO_RLANG.get(_target, "en")
         reading_app.main()
     elif active == "custom":
         custom_app.main()
@@ -464,6 +485,7 @@ def main():
         # Unknown module - reset
         for k in list(st.session_state):
             del st.session_state[k]
+        st.query_params.clear()
         render_launcher()
 
 

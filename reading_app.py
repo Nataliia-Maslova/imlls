@@ -41,7 +41,71 @@ DB_PATH   = ROOT / "data" / "reading_lessons.xlsx"
 
 # Lessons that use pre-recorded phoneme audio from phonemes/en/<letter>.mp3
 PHONEME_AUDIO_LESSONS = {1, 3, 8, 16}
-PHONEMES_DIR = ROOT / "phonemes" / "en"
+PHONEMES_DIR    = ROOT / "phonemes" / "en"
+PHONEMES_DIR_UK = ROOT / "phonemes" / "uk"
+PHONEMES_DIR_KO = ROOT / "phonemes" / "ko"
+
+# Spanish phoneme dispatch:
+#   A E I O U Z Ñ H + all syllables → edge-tts Spanish voice (lowercase)
+#   All consonants below → pre-recorded file from phonemes/en/
+ES_PHONEME_MAP: dict[str, Path] = {
+    # Special files
+    "R":  PHONEMES_DIR / "rr.ogg",
+    "J":  PHONEMES_DIR / "jota.ogg",
+    "CH": PHONEMES_DIR / "ch.ogg",
+    "LL": PHONEMES_DIR / "ll.ogg",
+    "Y":  PHONEMES_DIR / "ll.ogg",   # Y sounds like LL in Spanish
+    # Standard English phoneme mp3s
+    "M":  PHONEMES_DIR / "m.mp3",
+    "P":  PHONEMES_DIR / "p.mp3",
+    "L":  PHONEMES_DIR / "l.mp3",
+    "S":  PHONEMES_DIR / "s.mp3",
+    "T":  PHONEMES_DIR / "t.mp3",
+    "N":  PHONEMES_DIR / "n.mp3",
+    "D":  PHONEMES_DIR / "d.mp3",
+    "F":  PHONEMES_DIR / "f.mp3",
+    "B":  PHONEMES_DIR / "b.mp3",
+    "V":  PHONEMES_DIR / "v.mp3",
+    "C":  PHONEMES_DIR / "c.mp3",
+    "G":  PHONEMES_DIR / "g.mp3",
+    "Q":  PHONEMES_DIR / "q.mp3",
+    "X":  PHONEMES_DIR / "x.mp3",
+    "K":  PHONEMES_DIR / "k.mp3",
+    "W":  PHONEMES_DIR / "w.mp3",
+}
+
+# Korean consonant phoneme set — pre-recorded .ogg files in phonemes/ko/
+KO_CONSONANTS = {
+    "ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ",
+    "ㅈ", "ㅎ", "ㅋ", "ㅌ", "ㅍ", "ㅊ",
+    "ㄲ", "ㄸ", "ㅃ", "ㅆ", "ㅉ",
+}
+
+# ── Multi-language TTS / Whisper config ───────────────────────────────────
+TTS_CONFIG = {
+    "en": {"voice": "en-US-JennyNeural", "gtts": "en"},
+    "uk": {"voice": "uk-UA-PolinaNeural", "gtts": "uk"},
+    "es": {"voice": "es-ES-ElviraNeural", "gtts": "es"},
+    "ko": {"voice": "ko-KR-SunHiNeural",  "gtts": "ko"},
+}
+LANG_LABELS = {
+    "en": "English 🇬🇧",
+    "uk": "Українська 🇺🇦",
+    "es": "Español 🇪🇸",
+    "ko": "한국어 🇰🇷",
+}
+WHISPER_LANG = {"en": "en", "uk": "uk", "es": "es", "ko": "ko"}
+
+# Native language → column name in «Правила» sheet (rules for English lessons)
+NATIVE_TO_RULES_COL = {
+    "Ukrainian": "uk", "Russian": "ru",
+    "English":   "en", "Spanish": "es",
+}
+
+
+def _r_lang() -> str:
+    """Current target reading language from session state (default: 'en')."""
+    return st.session_state.get("r_lang", "en")
 
 # ── optional STT ──────────────────────────────────────────────────────────
 try:
@@ -76,7 +140,7 @@ def _save_step_progress(lesson_id: int, step: int, user_id: str):
     try:
         save_progress(
             user_id               = user_id,
-            language_pair         = READING_LANG_PAIR,
+            language_pair         = _reading_lang_pair(),
             last_completed_lesson = int(lesson_id),
             last_step             = int(step),
         )
@@ -84,7 +148,9 @@ def _save_step_progress(lesson_id: int, step: int, user_id: str):
     except Exception as e:
         print(f"[reading_app] save_progress error: {e}")
 
-READING_LANG_PAIR = "en-reading"  # used for SessionLogger / progress tracking
+def _reading_lang_pair() -> str:
+    """Language pair key for progress logging, e.g. 'en-reading', 'uk-reading'."""
+    return f"{_r_lang()}-reading"
 
 
 def _get_logger():
@@ -95,7 +161,7 @@ def _get_logger():
         return st.session_state["r_logger"]
     user_id = st.session_state.get("r_user", "anonymous")
     try:
-        logger = SessionLogger(user_id, language_pair=READING_LANG_PAIR)
+        logger = SessionLogger(user_id, language_pair=_reading_lang_pair())
         st.session_state["r_logger"] = logger
         return logger
     except Exception as e:
@@ -124,12 +190,13 @@ def _log_score(step: int, phrase_id: int, similarity: float,
         print(f"[reading_app] log error: {e}")
 
 
-def score_audio(audio_bytes, expected_text):
+def score_audio(audio_bytes, expected_text, lang: str = None):
     """Transcribe via Whisper and score similarity vs expected_text."""
     if not STT_OK or not SCORER_OK or not audio_bytes:
         return None
+    wh_lang = WHISPER_LANG.get(lang or _r_lang(), "en")
     try:
-        text = transcribe_bytes(audio_bytes, language="en")
+        text = transcribe_bytes(audio_bytes, language=wh_lang)
         return _evaluate(text, expected_text)
     except Exception as e:
         print(f"[score_audio] {e}")
@@ -182,14 +249,18 @@ def _run_async(coro):
         return asyncio.run(coro)
 
 
-def _gtts(text: str, path: Path):
+def _gtts(text: str, path: Path, lang: str = "en"):
     from gtts import gTTS
-    gTTS(text=text, lang="en", slow=True).save(str(path))
+    gtts_lang = TTS_CONFIG.get(lang, TTS_CONFIG["en"])["gtts"]
+    GTts = gTTS(text=text, lang=gtts_lang, slow=True)
+    GTts.save(str(path))
 
 
-async def _edge(text: str, path: Path, rate: str = "-5%"):
+async def _edge(text: str, path: Path, rate: str = "-5%", voice: str = None):
     import edge_tts
-    tts = edge_tts.Communicate(text, voice="en-US-JennyNeural", rate=rate)
+    if voice is None:
+        voice = TTS_CONFIG.get(_r_lang(), TTS_CONFIG["en"])["voice"]
+    tts = edge_tts.Communicate(text, voice=voice, rate=rate)
     await tts.save(str(path))
 
 
@@ -226,26 +297,28 @@ def _gtts_ok() -> bool:
         return False
 
 
-def audio_for_word(word: str):
+def audio_for_word(word: str, lang: str = None):
     """Generate MP3 for a word or compound phrase. Cached permanently."""
-    # Strip stress markers / curly apostrophes that TTS doesn't handle well
+    lang = lang or _r_lang()
+    # Strip stress markers / curly apostrophes that TTS doesn’t handle well
     clean = word
-    for ch in ("'", "‘", "’", "`"):
+    for ch in ("’", "’", "’", "`"):
         clean = clean.replace(ch, "")
     clean = clean.strip()
-    path  = _cache_path(f"word::{clean}", "w")
+    path  = _cache_path(f"word::{lang}::{clean}", "w")
     if path.exists():
         return path
+    voice = TTS_CONFIG.get(lang, TTS_CONFIG["en"])["voice"]
     try:
         if _edge_ok():
-            _run_async(_edge(clean, path))
+            _run_async(_edge(clean, path, voice=voice))
         elif _gtts_ok():
-            _gtts(clean, path)
+            _gtts(clean, path, lang=lang)
         else:
             return None
         return path if path.exists() else None
     except Exception as e:
-        print(f"[audio_for_word] '{clean}': {e}")
+        print(f"[audio_for_word] ‘{clean}’: {e}")
         return None
 
 
@@ -298,28 +371,79 @@ def prerecorded_phoneme_path(word: str):
     return p if p.exists() else None
 
 
-def audio_for_row(word: str, transcription: str, lesson_id=None):
-    """Smart dispatch:
-    - Lessons 1, 3, 8, 16 with letter rows: pre-recorded phonemes/en/<letter>.mp3
-    - Other letter rows (Aa, Bb): phoneme TTS
-    - Word rows (Bad, "Flat – bad"): word TTS on the first segment
+def audio_for_row(word: str, transcription: str, lesson_id=None, lang: str = None):
+    """Smart dispatch per language:
+    - English:    pre-recorded phonemes → IPA phoneme TTS → word TTS
+    - Ukrainian:  phonemes/uk/<WORD>.ogg  → TTS lowercase fallback
+    - Spanish:    ES_PHONEME_MAP for R/J/CH/LL → TTS lowercase for everything else
+    - Korean:     phonemes/ko/<jamo>.ogg for consonants → TTS for vowels/syllables
     """
+    lang = lang or _r_lang()
+
+    w = word.strip()
+
+    # ── Ukrainian ─────────────────────────────────────────────────────────
+    if lang == "uk":
+        # Try pre-recorded file: phonemes/uk/А.ogg, phonemes/uk/ДЖ.ogg, etc.
+        p = PHONEMES_DIR_UK / f"{w}.ogg"
+        if not p.exists():
+            p = PHONEMES_DIR_UK / f"{w.upper()}.ogg"
+        if p.exists():
+            return p
+        # Fallback: lowercase → edge-tts (syllables like МА → "ма")
+        trans = str(transcription).strip()
+        spoken_text = trans if (trans and trans.lower() != "nan") else w.lower()
+        spoken = re.sub(r"\s*[–—‐‑‒\-]\s*", ", ", spoken_text)
+        return audio_for_word(spoken, lang="uk")
+
+    # ── Spanish ───────────────────────────────────────────────────────────
+    if lang == "es":
+        w_up = w.upper()
+        # Specific consonants → pre-recorded phoneme file
+        if w_up in ES_PHONEME_MAP:
+            p = ES_PHONEME_MAP[w_up]
+            if p.exists():
+                return p
+        # Vowels (A E I O U), Ñ, H and all syllables → edge-tts Spanish voice
+        trans = str(transcription).strip()
+        spoken_text = trans if (trans and trans.lower() != "nan") else w.lower()
+        spoken = re.sub(r"\s*[–—‐‑‒\-]\s*", ", ", spoken_text)
+        return audio_for_word(spoken, lang="es")
+
+    # ── Korean ────────────────────────────────────────────────────────────────
+    if lang == "ko":
+        # Single consonant → pre-recorded ogg
+        if w in KO_CONSONANTS:
+            p = PHONEMES_DIR_KO / f"{w}.ogg"
+            if p.exists():
+                return p
+        # Everything else (vowels, syllables, words) → edge-tts Korean voice
+        trans = str(transcription).strip()
+        spoken_text = trans if (trans and trans.lower() != "nan") else w
+        spoken = re.sub(r"\s*[–—‐‑‒\-]\s*", ", ", spoken_text)
+        return audio_for_word(spoken, lang="ko")
+
+    # ── Other non-English ─────────────────────────────────────────────────────
+    if lang != "en":
+        trans = str(transcription).strip()
+        spoken_text = trans if (trans and trans.lower() != "nan") else w.lower()
+        spoken = re.sub(r"\s*[–—‐‑‒\-]\s*", ", ", spoken_text)
+        return audio_for_word(spoken, lang=lang)
+
+    # English path — original logic
     is_letter_row = bool(re.match(r"^[A-Za-z]{1,2}$", word.strip()))
 
     if lesson_id in PHONEME_AUDIO_LESSONS and is_letter_row:
         p = prerecorded_phoneme_path(word)
         if p:
             return p
-        # fall through to TTS if file missing for this letter
 
     if is_letter_row:
         ipa = re.sub(r"[\[\]]", "", transcription).strip()
         return audio_for_phoneme(ipa)
     else:
-        # Compound rows like "Shoo – shook" or "cat – ’cane – car – stair":
-        # replace dash separators with commas so TTS speaks each segment in sequence.
         spoken = re.sub(r"\s*[–—‐‑‒\-]\s*", ", ", word.strip())
-        return audio_for_word(spoken)
+        return audio_for_word(spoken, lang="en")
 
 
 def play(path, autoplay=False):
@@ -473,13 +597,14 @@ def lessons_table(rows, active_idx=None, scores=None,
 
 def preload_lesson_audio(rows, prefix: str):
     """Cache audio paths in session_state under `{prefix}_paths` (list of str or None)."""
-    key = f"{prefix}_paths"
+    lang = _r_lang()
+    key  = f"{prefix}_paths"
     if key not in st.session_state:
         with st.spinner("Готуємо аудіо..."):
             paths = []
             for _, r in rows.iterrows():
                 p = audio_for_row(r["word"], r["transcription"],
-                                  lesson_id=int(r["lesson_id"]))
+                                  lesson_id=int(r["lesson_id"]), lang=lang)
                 paths.append(str(p) if p else None)
         st.session_state[key] = paths
     return [Path(p) if p else None for p in st.session_state[key]]
@@ -495,12 +620,53 @@ def mic(uid: str):
 
 
 @st.cache_data
-def load(path: str) -> pd.DataFrame:
-    df = pd.read_excel(path, engine="openpyxl", sheet_name="Все уроки")
-    df.columns = ["lesson_id", "row_id", "word", "transcription", "rule"]
+def load(path: str, lang: str = "en", native_lang: str = "Ukrainian") -> pd.DataFrame:
+    """Load lesson data for the given target language.
+
+    For English: reads the 'en' sheet (5 cols) and merges rules from
+    the 'Правила' sheet in the user's native language.
+    For uk/es/ko: reads the respective sheet (4 cols, no IPA transcription for ko).
+    """
+    df = pd.read_excel(path, engine="openpyxl", sheet_name=lang)
+
+    if lang == "en":
+        df = df.iloc[:, :5]
+        df.columns = ["lesson_id", "row_id", "word", "transcription", "rule"]
+        # Merge multilingual rules from «Правила» sheet
+        rules_col = NATIVE_TO_RULES_COL.get(native_lang, "en")
+        try:
+            df_rules = pd.read_excel(path, engine="openpyxl", sheet_name="Правила")
+            df_rules.columns = ["lesson_id", "ru", "en", "es", "uk"]
+            rule_map = dict(zip(df_rules["lesson_id"].astype(int),
+                                df_rules[rules_col].fillna("")))
+            # Apply: Правила sheet takes priority (multilingual); fall back to inline rule
+            def _apply_rule(row):
+                from_sheet = rule_map.get(int(row["lesson_id"]), "")
+                if from_sheet:
+                    return from_sheet
+                existing = str(row["rule"]).strip() if pd.notna(row["rule"]) else ""
+                if existing and existing.lower() != "nan":
+                    return existing
+                return ""
+            df["rule"] = df.apply(_apply_rule, axis=1)
+        except Exception as e:
+            print(f"[load] rules merge failed: {e}")
+            df["rule"] = df["rule"].fillna("").astype(str).str.strip()
+    elif lang == "ko":
+        df = df.iloc[:, :3]
+        df.columns = ["lesson_id", "row_id", "word"]
+        df["transcription"] = ""
+        df["rule"]          = ""
+    else:  # uk, es
+        df = df.iloc[:, :4]
+        df.columns = ["lesson_id", "row_id", "word", "transcription"]
+        df["rule"] = ""
+
+    df["lesson_id"]     = pd.to_numeric(df["lesson_id"], errors="coerce").fillna(0).astype(int)
     df["word"]          = df["word"].astype(str).str.strip()
-    df["transcription"] = df["transcription"].astype(str).str.strip()
-    df["rule"]          = df["rule"].fillna("").astype(str).str.strip()
+    df["transcription"] = df["transcription"].astype(str).str.strip().replace("nan", "")
+    df["rule"]          = df["rule"].fillna("").astype(str).str.strip().replace("nan", "")
+    df = df[df["lesson_id"] > 0].reset_index(drop=True)
     return df
 
 
@@ -938,37 +1104,60 @@ def clear_step_state():
 def clear_all():
     for k in list(st.session_state):
         del st.session_state[k]
+    st.query_params.clear()
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  Setup screen
 # ═══════════════════════════════════════════════════════════════════════════
 
-def render_setup(df: pd.DataFrame):
+def render_setup():
     st.markdown("""
     <div style="text-align:center;padding:36px 0 20px">
       <div style="font-size:3rem">📖</div>
       <h1 style="color:var(--mova-ink);font-weight:600;margin:10px 0 4px">Reading Practice</h1>
-      <p style="color:var(--mova-ink-3)">English Phonics · 80 уроків · IPA озвучка</p>
+      <p style="color:var(--mova-ink-3)">Фонетика · IPA озвучка · 4 мови</p>
     </div>""", unsafe_allow_html=True)
 
     if not _edge_ok() and not _gtts_ok():
         st.error("⚠️ Встанови аудіо бібліотеку:\n\n`pip install edge-tts`\n\nабо\n\n`pip install gtts`")
 
-    lessons = sorted(df["lesson_id"].unique())
-    c1, c2  = st.columns(2)
-    with c2:
+    # ── Language selector ──────────────────────────────────────────────────
+    native_lang = st.session_state.get("launcher_native", "Ukrainian")
+    lang_options = list(LANG_LABELS.keys())
+    saved_lang   = st.session_state.get("r_lang", "en")
+    lang_idx     = lang_options.index(saved_lang) if saved_lang in lang_options else 0
+
+    col_lang, col_user = st.columns([2, 1])
+    with col_lang:
+        chosen_lang = st.selectbox(
+            "🌐 Мова для вивчення",
+            lang_options,
+            index=lang_idx,
+            format_func=lambda k: LANG_LABELS[k],
+            key="r_lang_select",
+        )
+    with col_user:
         default_user = st.session_state.get("launcher_user", "student1")
         user_id = st.text_input("👤 Ім'я", value=default_user)
 
-    # Auto-select lesson based on saved progress (resume mid-lesson if possible)
+    # Reload data when language changes
+    if chosen_lang != st.session_state.get("r_lang"):
+        st.session_state["r_lang"] = chosen_lang
+        st.rerun()
+
+    # Load data for selected language
+    df = load(str(DB_PATH), lang=chosen_lang, native_lang=native_lang)
+    lessons = sorted(df["lesson_id"].unique())
+
+    # Auto-select lesson based on saved progress
     progress    = None
     default_idx = 0
     resume_step = 1
     resume_msg  = None
     if LOGGER_OK and user_id:
         try:
-            progress = get_progress(user_id, READING_LANG_PAIR)
+            progress = get_progress(user_id, _reading_lang_pair())
         except Exception:
             progress = None
 
@@ -976,27 +1165,25 @@ def render_setup(df: pd.DataFrame):
         saved_lesson = progress["last_completed_lesson"]
         saved_step   = progress["last_step"]
         if saved_step >= 99:
-            # Lesson done -> next lesson at step 1
             next_lesson = saved_lesson + 1
             if next_lesson in lessons:
                 default_idx = lessons.index(next_lesson)
                 resume_step = 1
                 resume_msg  = f"▶ Продовжуєш з уроку {next_lesson} (останній пройдений: {saved_lesson})"
         else:
-            # Mid-lesson -> resume same lesson + step
             if saved_lesson in lessons:
                 default_idx = lessons.index(saved_lesson)
                 resume_step = max(1, min(5, saved_step))
                 resume_msg  = f"⏯ Повернешся до уроку {saved_lesson} на крок {resume_step}"
 
-    with c1:
-        lesson_id = st.selectbox(
-            "📚 Урок", lessons,
-            index=default_idx,
-            format_func=lambda x: f"Урок {x} — {len(df[df['lesson_id']==x])} рядків",
-        )
+    lesson_id = st.selectbox(
+        "📚 Урок", lessons,
+        index=default_idx,
+        format_func=lambda x: f"Урок {x} — {len(df[df['lesson_id']==x])} рядків",
+    )
 
     rows = df[df["lesson_id"] == lesson_id].reset_index(drop=True)
+    has_trans = chosen_lang != "ko"  # Korean has no transcription
 
     st.markdown(f"**{len(rows)} слів/рядків у цьому уроці:**")
     preview = "".join(
@@ -1004,7 +1191,8 @@ def render_setup(df: pd.DataFrame):
         'border-bottom:1px solid var(--mova-line);align-items:center">'
         f'<span style="min-width:24px;color:var(--mova-indigo-ink);font-family:JetBrains Mono,monospace;font-size:.75rem">{i+1:02d}</span>'
         f'<span style="flex:1;font-size:1rem;color:var(--mova-ink)">{row["word"]}</span>'
-        f'<span style="color:var(--mova-indigo);font-family:JetBrains Mono,monospace;font-size:.85rem">{row["transcription"]}</span>'
+        + (f'<span style="color:var(--mova-indigo);font-family:JetBrains Mono,monospace;font-size:.85rem">{row["transcription"]}</span>'
+           if has_trans and row["transcription"] else '')
         + ('<span style="color:var(--mova-ink-3);font-size:.75rem;margin-left:8px">'
            + row["rule"][:40] + '...</span>' if len(row["rule"]) > 5 else '')
         + '</div>'
@@ -1016,7 +1204,6 @@ def render_setup(df: pd.DataFrame):
         unsafe_allow_html=True,
     )
 
-    # If user kept the resume lesson selected, show the resume hint and start at saved step
     start_at_step = resume_step if (progress and lesson_id == lessons[default_idx]) else 1
     if resume_msg and lesson_id == lessons[default_idx]:
         st.info(resume_msg)
@@ -1024,11 +1211,11 @@ def render_setup(df: pd.DataFrame):
     st.markdown("")
     btn_label = f"▶ Продовжити з кроку {start_at_step}" if start_at_step > 1 else "▶ Почати урок"
     if st.button(btn_label, type="primary", use_container_width=True):
+        st.session_state["r_lang"]   = chosen_lang
         st.session_state["r_lesson"] = int(lesson_id)
         st.session_state["r_user"]   = user_id
         st.session_state["r_rows"]   = rows
         st.session_state["r_step"]   = start_at_step
-        # Reset session flags for the new lesson
         st.session_state.pop("_r_progress_saved", None)
         st.session_state.pop("_r_last_saved_progress", None)
         st.rerun()
@@ -1101,11 +1288,13 @@ def main():
         )
         st.stop()
 
-    df = load(str(DB_PATH))
-
     if "r_step" not in st.session_state:
-        render_setup(df)
+        render_setup()
         return
+
+    lang        = _r_lang()
+    native_lang = st.session_state.get("launcher_native", "Ukrainian")
+    df          = load(str(DB_PATH), lang=lang, native_lang=native_lang)
 
     step = st.session_state["r_step"]
     rows = st.session_state["r_rows"]
@@ -1179,10 +1368,8 @@ def main():
                          key="r_nav_repeat",
                          help="Перезапустити поточний крок"):
                 clear_step_state()
-                # step number stays the same, but per-step state is wiped
                 st.rerun()
 
-        # Quick-jump dropdown
         jump_default = min(max(step, 1), 5) - 1
         jump_to = st.selectbox(
             "Перейти до кроку",
@@ -1204,12 +1391,12 @@ def main():
             st.rerun()
 
     if step > 5:
-        # Save progress to Google Sheets (idempotent guard)
+        # Save progress (idempotent guard)
         if LOGGER_OK and not st.session_state.get("_r_progress_saved"):
             try:
                 save_progress(
                     user_id              = st.session_state.get("r_user", "anonymous"),
-                    language_pair        = READING_LANG_PAIR,
+                    language_pair        = _reading_lang_pair(),
                     last_completed_lesson= int(st.session_state.get("r_lesson", 0)),
                     last_step            = 99,
                 )
@@ -1220,12 +1407,12 @@ def main():
         st.markdown("""
         <div style="background:linear-gradient(135deg, var(--mova-mint-soft), var(--mova-indigo-soft));
              border:1px solid var(--mova-mint);border-radius:16px;padding:40px;text-align:center">
-          <div style="font-size:3rem">🎉</div>
+          <div style="font-size:3rem">&#x1F389;</div>
           <h2 style="color:var(--mova-ink)">Урок завершено!</h2>
         </div>""", unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         with c1:
-            if st.button("🔄 Повторити", type="primary", use_container_width=True):
+            if st.button("\U0001f504 Повторити", type="primary", use_container_width=True):
                 clear_step_state()
                 st.session_state["r_step"] = 1
                 st.session_state.pop("_r_progress_saved", None)

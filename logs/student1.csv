@@ -430,3 +430,10 @@ timestamp,user_id,lesson_id,phrase_id,step,similarity,response_time_ms,attempts,
 2026-05-21T18:23:20.358110,student1,uk-en-custom,1,1,3,1.0,9,1,1,lesson
 2026-05-21T18:23:23.388072,student1,uk-en-custom,1,2,3,1.0,0,1,1,lesson
 2026-05-21T18:23:27.148098,student1,uk-en-custom,1,3,3,1.0,0,1,1,lesson
+2026-05-22T11:01:00.854050,student1,ko-reading,25,0,2,0.1538,5160,1,0,reading
+2026-05-22T15:10:28.747192,student1,ko-reading,3,0,2,0.0,3780,1,0,reading
+2026-05-22T15:10:34.652267,student1,ko-reading,3,11,3,0.0,0,1,0,reading
+2026-05-22T15:10:39.450770,student1,ko-reading,3,12,3,0.0,0,1,0,reading
+2026-05-22T15:10:41.990620,student1,ko-reading,3,13,3,1.0,0,1,1,reading
+2026-05-22T15:10:43.930167,student1,ko-reading,3,14,3,1.0,0,1,1,reading
+2026-05-22T15:11:09.135056,student1,ko-reading,3,0,5,0.2857,4740,1,0,reading
