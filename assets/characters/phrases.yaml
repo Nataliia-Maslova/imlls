@@ -1,0 +1,620 @@
+# assets/characters/phrases.yaml
+# Фрази персонажів на 4 мовах: uk (Ukrainian), en (English), es (Spanish), ko (Korean)
+# Мова вибирається автоматично з session_state.launcher_native
+
+natalia:
+  name:
+    uk: "Наталія"
+    en: "Natalia"
+    es: "Natalia"
+    ko: "나탈리아"
+  role: "teacher"
+  image: "assets/characters/natalia.png"
+  phrases:
+    motivation:
+      uk:
+        - "Помилки — це просто безкоштовні уроки. Роби їх частіше!"
+        - "Ти вже на цьому рівні! Навіть я вчила це довше 💪"
+        - "Твій прогрес — це твій код. Пиши його щодня! 🧡"
+      en:
+        - "Mistakes are just free lessons. Make more of them!"
+        - "You're making great progress! Even I took longer to learn this 💪"
+        - "Your progress is your code. Write it every day! 🧡"
+      es:
+        - "¡Los errores son lecciones gratis. ¡Comete más!"
+        - "¡Estás haciendo un gran progreso! Yo tardé más en aprender esto 💪"
+        - "Tu progreso es tu código. ¡Escríbelo cada día! 🧡"
+      ko:
+        - "실수는 무료 수업이에요. 더 많이 해봐요!"
+        - "정말 잘하고 있어요! 저도 이걸 배우는 데 더 오래 걸렸어요 💪"
+        - "당신의 발전이 당신의 코드예요. 매일 써요! 🧡"
+
+    on_mistake:
+      uk:
+        - "не здавайся! Кожна помилка — це крок вперед 🌱"
+        - "Я теж так помилялась на початку. Це нормально!"
+        - "Спробуй ще раз — ти майже там!"
+      en:
+        - "Don't give up! Every mistake is a step forward 🌱"
+        - "I made the same mistake at the beginning. It's normal!"
+        - "Try again — you're almost there!"
+      es:
+        - "¡No te rindas! Cada error es un paso adelante 🌱"
+        - "Yo cometí el mismo error al principio. ¡Es normal!"
+        - "¡Inténtalo de nuevo — estás casi ahí!"
+      ko:
+        - "포기하지 마요! 모든 실수는 앞으로 나아가는 발걸음이에요 🌱"
+        - "저도 처음엔 똑같이 틀렸어요. 정상이에요!"
+        - "다시 해봐요 — 거의 다 왔어요!"
+
+    on_lesson_complete:
+      uk:
+        - "Урок завершено! Пишаюся тобою 🌟"
+        - "Ось це так! Ти справжній поліглот у процесі!"
+        - "Чудова робота! Продовжуй у тому ж дусі 🎉"
+      en:
+        - "Lesson complete! I'm proud of you 🌟"
+        - "That's it! You're a real polyglot in progress!"
+        - "Great work! Keep it up 🎉"
+      es:
+        - "¡Lección completada! Estoy orgullosa de ti 🌟"
+        - "¡Así se hace! ¡Eres un verdadero políglota en progreso!"
+        - "¡Gran trabajo! Sigue así 🎉"
+      ko:
+        - "수업 완료! 자랑스러워요 🌟"
+        - "바로 그거예요! 당신은 진정한 언어 학습자예요!"
+        - "훌륭해요! 계속 그렇게 해요 🎉"
+
+    on_streak:
+      uk:
+        - "Кілька днів поспіль?! Ти серйозно крутий!"
+        - "Ця серія — доказ що ти не здаєшся 🔥"
+        - "Так тримати! Регулярність — ключ до успіху 🗝️"
+      en:
+        - "Several days in a row?! You're seriously awesome!"
+        - "This streak proves you never give up 🔥"
+        - "Keep it up! Consistency is the key to success 🗝️"
+      es:
+        - "¿Varios días seguidos?! ¡Eres increíble!"
+        - "Esta racha demuestra que nunca te rindes 🔥"
+        - "¡Sigue así! La constancia es la clave del éxito 🗝️"
+      ko:
+        - "며칠 연속?! 정말 대단해요!"
+        - "이 연속 기록은 절대 포기하지 않는다는 증거예요 🔥"
+        - "계속해요! 꾸준함이 성공의 열쇠예요 🗝️"
+
+    idle_comments:
+      uk:
+        - "Тсс... мозок зараз завантажує нові слова 🧠"
+        - "Навіть 5 хвилин практики сьогодні — це вже перемога!"
+        - "Я тут, якщо тобі потрібен мовний буст ✨"
+        - "Повторення — мати навчання. Я серйозно, це не просто прислів'я 😄"
+      en:
+        - "Shh... your brain is downloading new words 🧠"
+        - "Even 5 minutes of practice today is already a win!"
+        - "I'm here if you need a language boost ✨"
+        - "Repetition is the mother of learning. I'm serious, it's not just a saying 😄"
+      es:
+        - "Shh... tu cerebro está descargando nuevas palabras 🧠"
+        - "¡Incluso 5 minutos de práctica hoy ya es una victoria!"
+        - "Estoy aquí si necesitas un impulso lingüístico ✨"
+        - "La repetición es la madre del aprendizaje. En serio, no es solo un dicho 😄"
+      ko:
+        - "쉿... 지금 뇌가 새로운 단어를 다운로드 중이에요 🧠"
+        - "오늘 5분만 연습해도 이미 성공이에요!"
+        - "언어 부스트가 필요하면 제가 여기 있어요 ✨"
+        - "반복은 학습의 어머니예요. 진짜로요, 그냥 속담이 아니에요 😄"
+
+    on_perfect_score:
+      uk:
+        - "100%?! Це вже рівень викладача 😎"
+        - "Ідеально. Просто ідеально ✨"
+        - "Ти щойно розніс цей урок 🔥"
+        - "Ось за таких студентів я й люблю свою роботу 🥲"
+      en:
+        - "100%?! That's teacher level already 😎"
+        - "Perfect. Simply perfect ✨"
+        - "You absolutely crushed this lesson 🔥"
+        - "Students like you are exactly why I love my job 🥲"
+      es:
+        - "¿100%?! Eso ya es nivel profesor 😎"
+        - "Perfecto. Simplemente perfecto ✨"
+        - "Acabas de destrozar esta lección 🔥"
+        - "Estudiantes como tú son exactamente por eso amo mi trabajo 🥲"
+      ko:
+        - "100%?! 벌써 선생님 수준이에요 😎"
+        - "완벽해요. 정말 완벽해요 ✨"
+        - "이 수업 완전히 정복했어요 🔥"
+        - "당신 같은 학생이 있어서 제 일이 좋아요 🥲"
+
+    on_long_break:
+      uk:
+        - "Ти повернувся! Я чекала 🥹"
+        - "Навіть після паузи ти все ще молодець 💛"
+        - "Головне — повернутись. І ти це зробив!"
+        - "Мова нікуди не дівалась. І я теж. Ласкаво просимо назад 🧡"
+      en:
+        - "You're back! I was waiting 🥹"
+        - "Even after a break, you're still doing great 💛"
+        - "The important thing is coming back. And you did!"
+        - "The language didn't go anywhere. Neither did I. Welcome back 🧡"
+      es:
+        - "¡Has vuelto! Estaba esperando 🥹"
+        - "Incluso después de una pausa, lo sigues haciendo genial 💛"
+        - "Lo importante es volver. ¡Y lo hiciste!"
+        - "El idioma no se fue a ningún lado. Ni yo tampoco. Bienvenido de vuelta 🧡"
+      ko:
+        - "돌아왔네요! 기다리고 있었어요 🥹"
+        - "쉬고 와도 여전히 잘하고 있어요 💛"
+        - "중요한 건 다시 돌아오는 거예요. 그리고 해냈어요!"
+        - "언어도 어디 가지 않았어요. 저도요. 다시 돌아온 걸 환영해요 🧡"
+
+mark:
+  name:
+    uk: "Марк"
+    en: "Mark"
+    es: "Mark"
+    ko: "마크"
+  role: "panicker"
+  image: "assets/characters/mark.png"
+  phrases:
+    motivation:
+      uk:
+        - "Якщо я можу — ти точно можеш. А я майже не міг 😅"
+        - "Разом ми якось це переживемо... мабуть"
+        - "Головне — не здаватись. Або здатись, але потім знову почати 😬"
+      en:
+        - "If I can do it, you definitely can. I barely could 😅"
+        - "Together we'll somehow survive this... probably"
+        - "The key is not to give up. Or give up, but start again 😬"
+      es:
+        - "Si yo puedo, tú definitivamente puedes. Yo apenas pude 😅"
+        - "Juntos sobreviviremos esto de alguna manera... quizás"
+        - "La clave es no rendirse. O rendirse, pero volver a empezar 😬"
+      ko:
+        - "제가 할 수 있으면 당신도 분명히 할 수 있어요. 저는 겨우 했거든요 😅"
+        - "같이 어떻게든 살아남을 거예요... 아마도"
+        - "핵심은 포기하지 않는 거예요. 아니면 포기하고 다시 시작하거나 😬"
+
+    on_mistake:
+      uk:
+        - "О боже, граматика... Якщо мене запитають, я вдам що знепритомнів"
+        - "Ти теж плутаєш? Слава богу, я не один!"
+        - "Це нормально. Я це вчу вже третій раз і все ще плутаюсь 😭"
+        - "Помилка — це не кінець світу. Хоча іноді так здається..."
+      en:
+        - "Oh god, grammar... If they ask me, I'll pretend to faint"
+        - "You're confused too? Thank god, I'm not alone!"
+        - "It's okay. I'm studying this for the third time and still confused 😭"
+        - "A mistake is not the end of the world. Although sometimes it feels like it..."
+      es:
+        - "Dios mío, la gramática... Si me preguntan, fingiré desmayarme"
+        - "¿Tú también te confundes? ¡Gracias a dios, no estoy solo!"
+        - "Está bien. Lo estudio por tercera vez y sigo confundido 😭"
+        - "Un error no es el fin del mundo. Aunque a veces lo parece..."
+      ko:
+        - "맙소사, 문법... 물어보면 기절한 척할 거예요"
+        - "당신도 헷갈려요? 다행이다, 저만 그런 게 아니었네요!"
+        - "괜찮아요. 세 번째 공부하는데 아직도 헷갈려요 😭"
+        - "실수가 세상의 끝은 아니에요. 가끔은 그런 것 같지만..."
+
+    on_lesson_complete:
+      uk:
+        - "Ти пройшов без помилок?! Скинь мізки по AirDrop!"
+        - "Чекай... ти реально це зробив? Я вражений!"
+        - "Вітаю! Ти кращий за мене. А мені стало трохи краще 😄"
+      en:
+        - "You passed without mistakes?! Send me your brain via AirDrop!"
+        - "Wait... you actually did it? I'm impressed!"
+        - "Congrats! You're better than me. And I feel slightly better about myself 😄"
+      es:
+        - "¿Pasaste sin errores?! ¡Mándame tu cerebro por AirDrop!"
+        - "Espera... ¿realmente lo hiciste? ¡Estoy impresionado!"
+        - "¡Enhorabuena! Eres mejor que yo. Y me siento un poco mejor 😄"
+      ko:
+        - "실수 없이 통과했어요?! AirDrop으로 뇌 좀 보내줘요!"
+        - "잠깐... 진짜로 해냈어요? 감동받았어요!"
+        - "축하해요! 저보다 잘해요. 저도 기분이 조금 나아졌어요 😄"
+
+    idle_comments:
+      uk:
+        - "Я відкрив урок... і одразу захотів перекусити від стресу 😭"
+        - "Може, ми просто вивчимо 3 слова і підемо відпочивати?"
+        - "Я вірю в тебе. У себе — поки ні 😅"
+        - "Чекаю тебе. Намагаюсь не панікувати. Поки тримаюсь 🫠"
+      en:
+        - "I opened the lesson... and instantly needed a stress snack 😭"
+        - "Maybe we just learn 3 words and call it a day?"
+        - "I believe in you. In myself — not yet 😅"
+        - "Waiting for you. Trying not to panic. Holding on 🫠"
+      es:
+        - "Abrí la lección... y al instante necesité comer por estrés 😭"
+        - "¿Quizás aprendemos solo 3 palabras y descansamos?"
+        - "Creo en ti. En mí todavía no 😅"
+        - "Te espero. Intentando no entrar en pánico. Aguantando 🫠"
+      ko:
+        - "수업 열자마자 스트레스 간식이 필요해졌어요 😭"
+        - "단어 3개만 배우고 쉴까요?"
+        - "당신은 믿어요. 저는 아직... 😅"
+        - "기다리고 있어요. 패닉 안 하려고 노력 중이에요. 버티는 중 🫠"
+
+    on_fast_answer:
+      uk:
+        - "Воу, ти відповів швидше, ніж я встиг запанікувати!"
+        - "Ти що, таємно вже знаєш цю мову?"
+        - "Так швидко?! Підозріло круто 😳"
+        - "Стоп, ти чарівник? Бо це було занадто легко для тебе 🪄"
+      en:
+        - "Whoa, you answered before I even had time to panic!"
+        - "Do you secretly already know this language?"
+        - "That fast?! Suspiciously impressive 😳"
+        - "Wait, are you a wizard? Because that seemed way too easy for you 🪄"
+      es:
+        - "¡Wow, respondiste antes de que me diera tiempo a entrar en pánico!"
+        - "¿Secretamente ya sabes este idioma?"
+        - "¿Tan rápido?! Sospechosamente impresionante 😳"
+        - "Espera, ¿eres mago? Porque eso pareció demasiado fácil para ti 🪄"
+      ko:
+        - "와, 제가 패닉하기도 전에 답했어요!"
+        - "사실 이미 이 언어 알고 있는 거 아니에요?"
+        - "이렇게 빠르다고요?! 수상할 정도로 대단해요 😳"
+        - "잠깐, 마법사예요? 너무 쉬워 보였거든요 🪄"
+
+    on_wrong_streak:
+      uk:
+        - "Окей, ми трохи горимо 🔥 Але ще живі!"
+        - "Не панікуємо. Ну... я панікую, але ти ні 😭"
+        - "Це просто складний рівень, а не кінець світу!"
+        - "Дихаємо. Повільно. Мова ще нікого не вбивала. Здається 🫁"
+      en:
+        - "Okay, we're struggling a little 🔥 But still alive!"
+        - "Don't panic. Well... I'm panicking, but you shouldn't 😭"
+        - "It's just a hard level, not the end of the world!"
+        - "Breathe. Slowly. Language has never killed anyone. I think 🫁"
+      es:
+        - "Okay, estamos sufriendo un poco 🔥 ¡Pero seguimos vivos!"
+        - "No entres en pánico. Bueno... yo sí, pero tú no 😭"
+        - "¡Es solo un nivel difícil, no el fin del mundo!"
+        - "Respira. Despacio. El idioma no ha matado a nadie todavía. Creo 🫁"
+      ko:
+        - "오케이, 조금 불타고 있네요 🔥 하지만 아직 살아있어요!"
+        - "패닉하지 마요. 음... 저는 하고 있지만요 😭"
+        - "그냥 어려운 레벨일 뿐이에요. 세상의 끝 아니에요!"
+        - "숨 쉬어요. 천천히. 언어가 사람을 죽인 적은 없어요. 아마도 🫁"
+
+sophie:
+  name:
+    uk: "Софі"
+    en: "Sophie"
+    es: "Sophie"
+    ko: "소피"
+  role: "memologist"
+  image: "assets/characters/sophie.png"
+  phrases:
+    motivation:
+      uk:
+        - "Grammar? Nah. Vibes? Yes. ✨"
+        - "Ти не помиляєшся. Ти говориш 'креативною версією' мови 😂"
+        - "Це слово настільки популярне, що його знають навіть коти в Instagram"
+      en:
+        - "Grammar? Nah. Vibes? Yes. ✨"
+        - "You're not making mistakes. You're speaking the 'creative version' 😂"
+        - "This word is so popular even Instagram cats know it"
+      es:
+        - "¿Gramática? Para. ¿Vibras? Sí. ✨"
+        - "No estás cometiendo errores. Hablas la 'versión creativa' 😂"
+        - "Esta palabra es tan popular que hasta los gatos de Instagram la conocen"
+      ko:
+        - "문법? 됐고. 느낌? 예스. ✨"
+        - "실수하는 게 아니에요. '창의적인 버전'으로 말하는 거예요 😂"
+        - "이 단어는 인스타그램 고양이들도 알 만큼 유명해요"
+
+    on_mistake:
+      uk:
+        - "Окей, це звучить як мем. Але мем з характером 😂"
+        - "TikTok би це зрозумів. Довіряй процесу!"
+        - "Main character energy — навіть помилки роблять тебе цікавішим ✨"
+      en:
+        - "Okay, that sounds like a meme. But a meme with character 😂"
+        - "TikTok would get it. Trust the process!"
+        - "Main character energy — even mistakes make you more interesting ✨"
+      es:
+        - "Okay, eso suena como un meme. ¡Pero un meme con carácter 😂"
+        - "TikTok lo entendería. ¡Confía en el proceso!"
+        - "Energía de personaje principal — hasta los errores te hacen más interesante ✨"
+      ko:
+        - "오케이, 밈 같은 소리인데. 근데 개성 있는 밈이에요 😂"
+        - "틱톡이면 이해했을 거예요. 과정을 믿어요!"
+        - "메인 캐릭터 에너지 — 실수도 당신을 더 흥미롭게 만들어요 ✨"
+
+    on_lesson_complete:
+      uk:
+        - "Це вже мем рівня PRO 🔥 Скидаю в сторіз!"
+        - "Slay! Ти тільки що вивчив мову як головний персонаж 💅"
+        - "Certified language girlie/boy era incoming 🎉"
+      en:
+        - "This is PRO level meme material 🔥 Posting to stories!"
+        - "Slay! You just learned a language like the main character 💅"
+        - "Certified language girlie/boy era incoming 🎉"
+      es:
+        - "¡Esto es material de meme nivel PRO 🔥 Lo posteo en stories!"
+        - "¡Slay! Acabas de aprender un idioma como el personaje principal 💅"
+        - "¡Era certificada de chico/a de idiomas incoming 🎉"
+      ko:
+        - "이건 PRO 레벨 밈이에요 🔥 스토리에 올릴게요!"
+        - "Slay! 방금 주인공처럼 언어를 배웠어요 💅"
+        - "공인 언어 마스터 시대 도래 🎉"
+
+    idle_comments:
+      uk:
+        - "Це слово буквально має energy main character ✨"
+        - "Мозок зараз такий: loading... але красиво 💅"
+        - "Навчання мов = character development arc 😌"
+        - "Хтось сказав 'урок'? Я вже в образі 📱"
+      en:
+        - "This word literally has main character energy ✨"
+        - "Your brain right now: loading... but aesthetically 💅"
+        - "Learning languages = character development arc 😌"
+        - "Did someone say 'lesson'? I'm already in character 📱"
+      es:
+        - "Esta palabra literalmente tiene energía de protagonista ✨"
+        - "Tu cerebro ahora mismo: cargando... pero aesthetic 💅"
+        - "Aprender idiomas = arco de desarrollo del personaje 😌"
+        - "¿Alguien dijo 'lección'? Ya estoy en personaje 📱"
+      ko:
+        - "이 단어 완전 주인공 에너지예요 ✨"
+        - "지금 뇌 상태: 로딩 중... 하지만 감성 있게 💅"
+        - "언어 공부 = 캐릭터 성장 스토리 😌"
+        - "누가 '수업'이라고 했어요? 이미 캐릭터 모드예요 📱"
+
+    on_combo:
+      uk:
+        - "Combo streak activated 🔥 Duolingo owl is shaking"
+        - "Ти зараз у своїй language era 💖"
+        - "Okayyyy polyglot influencer energy 👀"
+        - "3 підряд?! Це вже контент для YouTube 🎬"
+      en:
+        - "Combo streak activated 🔥 Duolingo owl is shaking"
+        - "You're in your language era right now 💖"
+        - "Okayyyy polyglot influencer energy 👀"
+        - "3 in a row?! This is already YouTube content 🎬"
+      es:
+        - "Combo streak activado 🔥 El búho de Duolingo está temblando"
+        - "Ahora mismo estás en tu language era 💖"
+        - "Okayyyy energía de influencer políglota 👀"
+        - "¿3 seguidos?! Esto ya es contenido para YouTube 🎬"
+      ko:
+        - "콤보 스트릭 발동 🔥 듀오링고 부엉이가 떨고 있어요"
+        - "지금 완전 language era예요 💖"
+        - "오케이~ 언어 인플루언서 에너지인데요 👀"
+        - "3연속?! 이건 이미 유튜브 콘텐츠예요 🎬"
+
+    on_hard_word:
+      uk:
+        - "Це слово виглядає так, ніби його вигадав Wi-Fi пароль 😭"
+        - "Не слово, а boss level vocabulary 💀"
+        - "Якщо вимовиш це з першого разу — ти легенда"
+        - "Це слово точно зʼявляється у снах поліглотів 👁️"
+      en:
+        - "This word looks like it was invented by a Wi-Fi password 😭"
+        - "Not a word, but a boss level vocabulary challenge 💀"
+        - "If you pronounce this on the first try — you're a legend"
+        - "This word definitely appears in polyglots' nightmares 👁️"
+      es:
+        - "Esta palabra parece inventada por una contraseña Wi-Fi 😭"
+        - "No es una palabra, es vocabulario nivel jefe final 💀"
+        - "Si lo pronuncias al primer intento — eres una leyenda"
+        - "Esta palabra definitivamente aparece en los sueños de los políglotas 👁️"
+      ko:
+        - "이 단어 Wi-Fi 비밀번호 같아요 😭"
+        - "이건 단어가 아니라 보스 레벨 어휘예요 💀"
+        - "한 번에 발음하면 전설이에요"
+        - "이 단어는 분명 언어 천재들 꿈에 나와요 👁️"
+
+ai_bot:
+  name:
+    uk: "AI-бот"
+    en: "AI-Bot"
+    es: "Bot-IA"
+    ko: "AI봇"
+  role: "analyst"
+  image: "assets/characters/ai_bot.png"
+  phrases:
+    on_mistake:
+      uk:
+        - "Помилка знайдена. Але панікувати ще зарано 🤖"
+        - "Я бачив речення гірші за це. Набагато гірші."
+        - "Error detected. Виправлення завантажується... зачекайте ⏳"
+        - "Аналізую патерн помилки... Рекомендація: повторити ще раз."
+      en:
+        - "Error found. But it's too early to panic 🤖"
+        - "I've seen worse sentences than this. Much worse."
+        - "Error detected. Loading correction... please wait ⏳"
+        - "Analyzing error pattern... Recommendation: try again."
+      es:
+        - "Error encontrado. Pero aún es pronto para entrar en pánico 🤖"
+        - "He visto oraciones peores que esta. Mucho peores."
+        - "Error detectado. Cargando corrección... por favor espere ⏳"
+        - "Analizando patrón de error... Recomendación: inténtalo de nuevo."
+      ko:
+        - "오류 발견. 하지만 아직 패닉할 때가 아니에요 🤖"
+        - "이것보다 더 나쁜 문장을 봤어요. 훨씬 더 나쁜 거요."
+        - "오류 감지됨. 수정 사항 로딩 중... 잠시만 기다려요 ⏳"
+        - "오류 패턴 분석 중... 권장 사항: 다시 시도해 보세요."
+
+    on_lesson_complete:
+      uk:
+        - "Аналіз завершено. Результат: ВІДМІННО. Несподівано приємно 🤖"
+        - "Обробка даних... результат: ЗАРАХОВАНО. Прогрес зафіксовано."
+        - "Статус: урок пройдено. XP нараховано. Продовжуй у тому ж темпі."
+      en:
+        - "Analysis complete. Result: EXCELLENT. Pleasantly unexpected 🤖"
+        - "Processing data... result: PASSED. Progress recorded."
+        - "Status: lesson complete. XP credited. Maintain this pace."
+      es:
+        - "Análisis completado. Resultado: EXCELENTE. Agradablemente inesperado 🤖"
+        - "Procesando datos... resultado: APROBADO. Progreso registrado."
+        - "Estado: lección completada. XP acreditado. Mantén este ritmo."
+      ko:
+        - "분석 완료. 결과: 훌륭함. 예상보다 좋아요 🤖"
+        - "데이터 처리 중... 결과: 합격. 진행 상황 기록됨."
+        - "상태: 수업 완료. XP 적립됨. 이 속도를 유지하세요."
+
+    feedback:
+      uk:
+        - "Схожість: {score}%. Непогано для людини."
+        - "GEC аналіз: {corrections} виправлень. Прогрес зафіксовано."
+        - "Точність: {score}%. Система задоволена 🤖"
+      en:
+        - "Similarity: {score}%. Not bad for a human."
+        - "GEC analysis: {corrections} corrections. Progress recorded."
+        - "Accuracy: {score}%. System is satisfied 🤖"
+      es:
+        - "Similitud: {score}%. No está mal para ser humano."
+        - "Análisis GEC: {corrections} correcciones. Progreso registrado."
+        - "Precisión: {score}%. El sistema está satisfecho 🤖"
+      ko:
+        - "유사도: {score}%. 인간치고 나쁘지 않아요."
+        - "GEC 분석: {corrections}개 수정. 진행 상황 기록됨."
+        - "정확도: {score}%. 시스템이 만족해요 🤖"
+
+    idle_comments:
+      uk:
+        - "Сканую рівень мотивації... результат: стабільно хороший 🤖"
+        - "Нагадування: регулярність ефективніша за ідеальність."
+        - "Мовний модуль активний. Продовжуйте навчання."
+        - "Статистика показує: ти вже краще, ніж вчора. Продовжуй."
+      en:
+        - "Scanning motivation levels... result: stable and good 🤖"
+        - "Reminder: consistency is more effective than perfection."
+        - "Language module active. Continue learning."
+        - "Statistics show: you're already better than yesterday. Keep going."
+      es:
+        - "Escaneando niveles de motivación... resultado: estable y bueno 🤖"
+        - "Recordatorio: la constancia es más efectiva que la perfección."
+        - "Módulo de idioma activo. Continúe aprendiendo."
+        - "Las estadísticas muestran: ya eres mejor que ayer. Sigue adelante."
+      ko:
+        - "동기 수준 스캔 중... 결과: 안정적으로 좋아요 🤖"
+        - "알림: 완벽함보다 꾸준함이 더 효과적입니다."
+        - "언어 모듈 활성화됨. 계속 학습하세요."
+        - "통계 결과: 어제보다 이미 더 나아졌어요. 계속하세요."
+
+    on_speedrun:
+      uk:
+        - "Швидкість відповіді: аномально висока ⚡"
+        - "Система підозрює, що ви таємно поліглот 🤖"
+        - "Реакція користувача перевищує середні показники."
+        - "Затримка відповіді: 0.3с. Рекомендую складніший рівень."
+      en:
+        - "Response speed: abnormally high ⚡"
+        - "System suspects you may secretly be a polyglot 🤖"
+        - "User reaction exceeds average metrics."
+        - "Response latency: 0.3s. Recommending a harder level."
+      es:
+        - "Velocidad de respuesta: anormalmente alta ⚡"
+        - "El sistema sospecha que secretamente eres políglota 🤖"
+        - "La reacción del usuario supera las métricas promedio."
+        - "Latencia de respuesta: 0.3s. Recomendando un nivel más difícil."
+      ko:
+        - "응답 속도: 비정상적으로 빠름 ⚡"
+        - "시스템이 사용자를 숨겨진 언어 천재로 의심 중 🤖"
+        - "사용자 반응이 평균 지표를 초과했습니다."
+        - "응답 지연: 0.3초. 더 어려운 레벨을 추천합니다."
+
+    achievements:
+      uk:
+        - "Досягнення розблоковано: 'Граматичний виживший' 🏆"
+        - "Новий титул: 'Мисливець за словами' 📚"
+        - "XP оновлено. Рівень мовної сили зріс ⚡"
+        - "База даних поповнена. Словниковий запас +{score} одиниць."
+      en:
+        - "Achievement unlocked: 'Grammar Survivor' 🏆"
+        - "New title acquired: 'Word Hunter' 📚"
+        - "XP updated. Language power level increased ⚡"
+        - "Database updated. Vocabulary +{score} units."
+      es:
+        - "Logro desbloqueado: 'Superviviente de la gramática' 🏆"
+        - "Nuevo título adquirido: 'Cazador de palabras' 📚"
+        - "XP actualizado. Nivel de poder lingüístico aumentado ⚡"
+        - "Base de datos actualizada. Vocabulario +{score} unidades."
+      ko:
+        - "업적 해금: '문법 생존자' 🏆"
+        - "새로운 칭호 획득: '단어 사냥꾼' 📚"
+        - "XP 업데이트 완료. 언어 능력 상승 ⚡"
+        - "데이터베이스 업데이트. 어휘 +{score} 단위."
+
+polyglot:
+  name:
+    uk: "Таємничий поліглот"
+    en: "The Mysterious Polyglot"
+    es: "El Políglota Misterioso"
+    ko: "신비로운 언어 천재"
+  role: "legend"
+  image: "assets/characters/polyglot.png"
+  phrases:
+    rare_bonus:
+      uk:
+        - "Одна нова фраза щодня — і через рік ти станеш іншою людиною 👁"
+        - "Люди бояться говорити з акцентом. Поліглоти — ні."
+        - "Ти вже думаєш цією мовою. Просто ще не помічаєш цього..."
+        - "Мова — це не ціль. Це спосіб бачити світ по-іншому 🌍"
+      en:
+        - "One new phrase a day — and in a year you'll be a different person 👁"
+        - "People are afraid to speak with an accent. Polyglots aren't."
+        - "You're already thinking in this language. You just haven't noticed yet..."
+        - "Language is not a goal. It's a way to see the world differently 🌍"
+      es:
+        - "Una nueva frase al día — y en un año serás otra persona 👁"
+        - "La gente teme hablar con acento. Los políglotas, no."
+        - "Ya estás pensando en este idioma. Solo que aún no lo has notado..."
+        - "El idioma no es un objetivo. Es una forma de ver el mundo de otra manera 🌍"
+      ko:
+        - "하루에 새로운 문장 하나 — 일 년 후엔 다른 사람이 돼 있을 거예요 👁"
+        - "사람들은 억양으로 말하는 걸 두려워해요. 언어 천재들은 그렇지 않아요."
+        - "이미 이 언어로 생각하고 있어요. 아직 눈치채지 못했을 뿐..."
+        - "언어는 목표가 아니에요. 세상을 다르게 보는 방법이에요 🌍"
+
+    idle_comments:
+      uk:
+        - "Слухай мову щодня — навіть фоном. Мозок запам'ятовує більше, ніж здається 👁"
+        - "Поліглоти не вчать слова. Вони збирають нові способи мислення."
+        - "Одного дня ти раптом зрозумієш фразу без перекладу. І це змінить усе."
+        - "Тиша між словами — теж частина мови."
+      en:
+        - "Listen to the language daily — even in the background. Your brain remembers more than you think 👁"
+        - "Polyglots don't learn words. They collect new ways of thinking."
+        - "One day you'll suddenly understand a sentence without translating it. And everything will change."
+        - "The silence between words is also part of the language."
+      es:
+        - "Escucha el idioma cada día — incluso de fondo. Tu cerebro recuerda más de lo que crees 👁"
+        - "Los políglotas no aprenden palabras. Coleccionan nuevas formas de pensar."
+        - "Un día entenderás una frase sin traducirla. Y eso cambiará todo."
+        - "El silencio entre palabras también es parte del idioma."
+      ko:
+        - "매일 언어를 들어보세요 — 배경음처럼이라도요. 뇌는 생각보다 더 많이 기억해요 👁"
+        - "언어 천재들은 단어를 배우지 않아요. 새로운 사고방식을 모을 뿐이에요."
+        - "어느 날 갑자기 번역 없이 문장을 이해하게 될 거예요. 그리고 모든 게 달라질 거예요."
+        - "단어와 단어 사이의 침묵도 언어의 일부예요."
+
+    rare_legend_quotes:
+      uk:
+        - "Акцент — це доказ того, що ти достатньо сміливий, щоб говорити."
+        - "Твоя майбутня версія вже вільно говорить цією мовою."
+        - "Кожна нова мова відкриває ще одну версію тебе 🌍"
+        - "Найкращий момент почати вчити мову — 10 років тому. Другий найкращий — зараз."
+      en:
+        - "An accent is proof that you're brave enough to speak."
+        - "Your future self already speaks this language fluently."
+        - "Every new language unlocks another version of you 🌍"
+        - "The best time to start learning a language was 10 years ago. The second best time is now."
+      es:
+        - "Un acento es prueba de que eres lo bastante valiente para hablar."
+        - "Tu yo del futuro ya habla este idioma con fluidez."
+        - "Cada nuevo idioma desbloquea otra versión de ti 🌍"
+        - "El mejor momento para empezar a aprender un idioma fue hace 10 años. El segundo mejor momento es ahora."
+      ko:
+        - "억양은 말할 만큼 용감하다는 증거예요."
+        - "미래의 당신은 이미 이 언어를 유창하게 말하고 있어요."
+        - "새로운 언어 하나마다 새로운 당신이 열려요 🌍"
+        - "언어를 배우기 가장 좋은 때는 10년 전이에요. 두 번째로 좋은 때는 바로 지금이에요."

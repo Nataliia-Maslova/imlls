@@ -1,0 +1,15 @@
+credentials:
+  usernames:
+    nataliiamaslovaneo@gmail.com:
+      email: nataliiamaslovaneo@gmail.com
+      logged_in: false
+      first_name: natasha
+      last_name: nata
+      password: $2b$12$Yyo3k3Js.Oa52rjAVJrRDuPaxXBVCEPFOoPjAwEowrk7YYtB832sG
+      roles: null
+      native_lang: Ukrainian
+      target_lang: English
+cookie:
+  expiry_days: 30
+  key: c76da343968944675ee72c9843fa714c96757d634fe63e303e9348b6afa6e72d
+  name: imlls_auth

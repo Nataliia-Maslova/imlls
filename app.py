@@ -110,6 +110,7 @@ def _inject_mova_css() -> None:
         unsafe_allow_html=True,
     )
 
+
 LANGUAGES = ["English", "Ukrainian", "Spanish", "Korean"]
 
 DB_GRAMMAR  = ROOT / "data" / "imlls_database.xlsx"
@@ -187,8 +188,6 @@ def _module_progress(user_id: str, lang_pair: str, total: int) -> dict:
     """
     Look up the saved progress for `lang_pair` and convert it into:
       {"current": N, "total": M, "pct": float, "done": bool}
-    `current` is the exercise the user is on (1-based, capped at total+1
-    if the whole block is finished).
     """
     info = {"current": 1, "total": max(total, 0), "pct": 0.0, "done": False}
     if not user_id or total <= 0:
@@ -204,19 +203,17 @@ def _module_progress(user_id: str, lang_pair: str, total: int) -> dict:
     saved_step   = int(p.get("last_step") or 1)
 
     if saved_step >= 99:
-        # Block fully completed up to (and including) saved_lesson
         completed = min(saved_lesson, total)
         info.update({
             "current": min(completed + 1, total),
-            "pct": round(completed / total * 100, 1),
-            "done": completed >= total,
+            "pct":     round(completed / total * 100, 1),
+            "done":    completed >= total,
         })
     else:
-        # Mid-lesson: count fully-completed lessons (saved_lesson - 1)
         completed = max(saved_lesson - 1, 0)
         info.update({
             "current": min(saved_lesson, total),
-            "pct": round(completed / total * 100, 1),
+            "pct":     round(completed / total * 100, 1),
         })
     return info
 
@@ -225,28 +222,27 @@ def _module_progress_card(module_key: str, native: str, target: str,
                           user_id: str) -> dict:
     """Returns the progress info to render on a module card."""
     if module_key == "reading":
-        # Reading progress is tracked per chosen language (r_lang in session)
         import streamlit as _st
-        r_lang = _st.session_state.get("r_lang", "en")
-        total = _count_reading_lessons(lang=r_lang)
+        r_lang    = _st.session_state.get("r_lang", "en")
+        total     = _count_reading_lessons(lang=r_lang)
         lang_pair = f"{r_lang}-reading"
-        word = "Lesson"
+        word      = "Lesson"
     elif module_key == "grammar":
-        total = _count_grammar_lessons(native, target)
+        total     = _count_grammar_lessons(native, target)
         lang_pair = f"{WHISPER_LANG.get(native,'?')}-{WHISPER_LANG.get(target,'?')}-grammar"
-        word = "Lesson"
+        word      = "Lesson"
     elif module_key == "vocab":
-        total = _count_vocab_lessons(native, target)
+        total     = _count_vocab_lessons(native, target)
         lang_pair = f"{WHISPER_LANG.get(native,'?')}-{WHISPER_LANG.get(target,'?')}-vocab"
-        word = "Topic"
-    else:  # custom — show how many lessons the user has created for this pair
+        word      = "Topic"
+    else:
         try:
             total = len(list_user_lessons(user_id, native_lang=native,
                                           target_lang=target))
         except Exception:
             total = 0
         lang_pair = f"{WHISPER_LANG.get(native,'?')}-{WHISPER_LANG.get(target,'?')}-custom"
-        word = "Lesson"
+        word      = "Lesson"
     pr = _module_progress(user_id, lang_pair, total)
     pr["lang_pair"]   = lang_pair
     pr["lesson_word"] = word
@@ -254,9 +250,6 @@ def _module_progress_card(module_key: str, native: str, target: str,
     return pr
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# Launcher screen
-# ═══════════════════════════════════════════════════════════════════════════
 def render_launcher():
     st.markdown("""
     <style>

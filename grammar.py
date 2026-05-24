@@ -29,6 +29,14 @@ from engine.logger  import SessionLogger, get_last_lesson, get_progress, save_pr
 from engine.gec import correct as gec_correct, gec_available
 from engine.gamification import on_step_complete, on_lesson_complete, sidebar_widget
 from engine import i18n
+from engine.character_widget import show_character
+
+try:
+    from engine.adaptive import AdaptiveEngine as _AdaptiveEngine, FULL_SEQUENCE as _FULL_SEQ
+    _ADAPTIVE_AVAILABLE = True
+except Exception:
+    _ADAPTIVE_AVAILABLE = False
+    _FULL_SEQ = [1, 2, 3, 4, 5, 6, 7, 8]
 
 # Prefer the workbook with lesson titles (topic_en / topic_uk columns) if it
 # exists; otherwise fall back to the original. Both have identical phrase data.
@@ -575,7 +583,9 @@ def step_hdr(step, title=None, desc=None, total=8):
     """Render the step header.
 
     Title and hint are read from engine.i18n based on the current session's
-    native language. Explicit ``title``/``desc`` args still win if passed.
+    native language. Adaptive step sequence (if active) is read from
+    session_state so every step function gets correct pill rendering
+    without changing its own signature.
     """
     # Look up the user's native language from the active session
     sess = st.session_state.get("session")
@@ -591,18 +601,54 @@ def step_hdr(step, title=None, desc=None, total=8):
     step_label = i18n.get(native_lang, "step_label")
     req_word   = i18n.get(native_lang, "required")
 
-    pills = "".join(
-        f'<span class="pill {"pill-active" if s==step else "pill-done" if s<step else "pill-required" if s in REQUIRED_STEPS and s>step else ""}">'
-        f'{"🔒" if s in REQUIRED_STEPS and s > step else s}</span>'
-        for s in range(1, total+1)
-    )
+    # ── Adaptive-aware pill rendering ──────────────────────────────────────
+    adp_steps = st.session_state.get("_adaptive_steps")
+    adp_idx   = st.session_state.get("_adaptive_idx", 0)
+
+    if adp_steps:
+        seq       = adp_steps
+        adp_total = len(seq)
+        pos_label = adp_idx + 1        # 1-based position shown to user
+
+        # Deduplicate while preserving order (handles EXTRA_REPEAT)
+        seen_s: set = set()
+        unique_seq = [s for s in seq if not (s in seen_s or seen_s.add(s))]  # type: ignore[func-returns-value]
+
+        def _pcls(s: int) -> str:
+            occurrences = [i for i, x in enumerate(seq) if x == s]
+            if s == step and any(i == adp_idx for i in occurrences):
+                return "pill-active"
+            if max(occurrences) < adp_idx:
+                return "pill-done"
+            if s in REQUIRED_STEPS:
+                return "pill-required"
+            return ""
+
+        def _plbl(s: int) -> str:
+            occurrences = [i for i, x in enumerate(seq) if x == s]
+            pending = max(occurrences) >= adp_idx and not any(i == adp_idx for i in occurrences)
+            return "🔒" if (pending and s in REQUIRED_STEPS) else str(s)
+
+        pills = "".join(
+            f'<span class="pill {_pcls(s)}">{_plbl(s)}</span>'
+            for s in unique_seq
+        )
+    else:
+        adp_total = total
+        pos_label = step
+        pills = "".join(
+            f'<span class="pill {"pill-active" if s==step else "pill-done" if s<step else "pill-required" if s in REQUIRED_STEPS and s>step else ""}">'
+            f'{"🔒" if s in REQUIRED_STEPS and s > step else s}</span>'
+            for s in range(1, total + 1)
+        )
+
     req_note = (f' <span style="color:var(--mova-amber-ink);font-size:.72rem;">🔒 {req_word}</span>'
                 if step in REQUIRED_STEPS else '')
 
     st.markdown(f"""
     <div class="step-header step-type-{s_type}">
       <div class="step-pills">{pills}</div>
-      <div class="step-num">{step_label} {step} / {total}{req_note}</div>
+      <div class="step-num">{step_label} {pos_label} / {adp_total}{req_note}</div>
       <div class="step-icon-row">
         <span class="step-icon-big">{icon}</span>
         <div style="flex:1">
@@ -668,11 +714,17 @@ def step1(session: LessonSession, tts_lang, wh_lang):
                 f"`{r['transcribed']}`"
             )
 
+    # Character above phrases — shown once per step entry, not on button-click rerun
+    if "s1_char_shown" not in st.session_state:
+        st.session_state["s1_char_shown"] = True
+        show_character("natalia", "motivation")
+
     # Phrase list
     phrase_table(phrases, show_native=True, show_target=True, scores=scores)
 
     # Next button below phrases
     if st.button("Next →", use_container_width=True, key="s1_next"):
+        st.session_state.pop("s1_char_shown", None)
         return True
     return False
 
@@ -758,14 +810,17 @@ def step3(session: LessonSession, tts_lang, wh_lang):
                     step=3,
                     phrase_id=int(p.get("phrase_id", idx)),
                 )
-                if correct: st.success("✓ Correct!")
-                else: st.error(f"✗ Wrong — answer: **{p['native']}**")
+                if correct:
+                    st.success("✓ Correct!")
+                else:
+                    st.error(f"✗ Wrong — answer: **{p['native']}**")
                 time.sleep(0.4)
                 st.rerun()
 
     if idx >= len(phrases):
         ok = sum(1 for v in scores.values() if v)
         st.success(f"Done! {ok}/{len(phrases)} correct.")
+        show_character("sophie", "on_lesson_complete")
         if st.button("Continue to Step 4 →", type="primary"):
             for k in ["s3_idx","s3_scores"] + [f"s3_opts_{i}" for i in range(len(phrases))]:
                 st.session_state.pop(k, None)
@@ -858,12 +913,18 @@ def step6(session: LessonSession, tts_lang, wh_lang):
             st.session_state["s6_done"] = True
             st.markdown(f"{'✓' if r['passed'] else '✗'} **{int(r['score']*100)}%** — `{r['transcribed']}`")
 
+    # Character above phrases — shown once per step entry, not on button-click rerun
+    if "s6_char_shown" not in st.session_state:
+        st.session_state["s6_char_shown"] = True
+        show_character("mark", "motivation")
+
     # Phrase list (native shown, target hidden)
     phrase_table(phrases, show_native=True, show_target=False, scores=scores)
 
     # Next button below phrases
     if st.button("Next →", use_container_width=True, key="s6_next"):
         st.session_state["s6_idx"] = 0
+        st.session_state.pop("s6_char_shown", None)
         return True
     return False
 
@@ -935,6 +996,11 @@ def step7(session: LessonSession, tts_lang, wh_lang):
                 ". You can still continue to Step 8."
             )
 
+    # Character above phrases — shown once per step entry, not on button-click rerun
+    if "s7_char_shown" not in st.session_state:
+        st.session_state["s7_char_shown"] = True
+        show_character("polyglot", "rare_bonus")
+
     # Phrase list in the middle (native shown, target hidden)
     phrase_table(phrases, show_native=True, show_target=False)
 
@@ -943,6 +1009,7 @@ def step7(session: LessonSession, tts_lang, wh_lang):
         if st.button("Continue to Step 8 →", type="primary",
                      use_container_width=True, key="s7_continue"):
             st.session_state.pop("s7_result", None)
+            st.session_state.pop("s7_char_shown", None)
             return True
     return False
 
@@ -950,38 +1017,78 @@ def step7(session: LessonSession, tts_lang, wh_lang):
 # ═══════════════════════════════════════════════════════════════════════════
 # Lesson complete
 # ═══════════════════════════════════════════════════════════════════════════
+def _char_img_b64(character_key: str) -> str:
+    """Повертає base64 PNG персонажа або порожній рядок."""
+    from pathlib import Path as _Path
+    import base64 as _b64
+    p = ROOT / "assets" / "characters" / f"{character_key}.png"
+    if p.exists():
+        return _b64.b64encode(p.read_bytes()).decode()
+    return ""
+
+
 def render_complete(session: LessonSession):
-    logs   = session.logger.read_all()
-    total  = len(logs)
-    passed = sum(1 for r in logs if str(r.get("success")) == "1")
-    rate   = passed / total * 100 if total else 0
+    # ── Визначаємо персонажа і фразу ─────────────────────────────────────────
+    from engine.characters import get_phrase as _get_phrase
 
-    st.markdown(f"""
-    <div class="cbanner">
-      <div style="font-size:2.8rem">🎉</div>
-      <h2 style="color:var(--mova-ink);margin:10px 0">Lesson Complete!</h2>
-      <p style="color:var(--mova-ink-2)">
-        Pass rate: <strong style="color:var(--mova-mint)">{rate:.0f}%</strong>
-        ({passed}/{total} checks passed)
-      </p>
-    </div>""", unsafe_allow_html=True)
+    # Мова
+    _nat_lang = session.state.native_lang or st.session_state.get("launcher_native", "English")
 
-    # Save progress when lesson is completed
+    # Прогрес streak — потрібен щоб вибрати правильну категорію фрази
+    _streak = st.session_state.get("_cached_streak", 0)
+    _category = "on_streak" if _streak > 1 else "on_lesson_complete"
+
+    _char_data = _get_phrase("natalia", _category, lang=_nat_lang)
+    _phrase    = _char_data["phrase"] if _char_data else "Great work! Keep it up 🎉"
+    _char_name = _char_data["name"]   if _char_data else "Natalia"
+    _img_b64   = _char_img_b64("natalia")
+    _img_tag   = (
+        '<img src="data:image/png;base64,' + _img_b64 + '" '
+        'style="width:110px;height:110px;object-fit:cover;'
+        'border-radius:50%;border:3px solid var(--mova-mint);'
+        'box-shadow:0 4px 14px rgba(0,0,0,.15);margin-bottom:8px;" />'
+        if _img_b64 else
+        '<div style="font-size:4rem;margin-bottom:8px;">👩‍🏫</div>'
+    )
+
+    st.markdown(
+        '<div class="cbanner" style="padding:32px 36px;">'
+        '<div style="font-size:2.4rem;margin-bottom:6px;">🎉</div>'
+        '<h2 style="color:var(--mova-ink);margin:0 0 20px 0;">Lesson Complete!</h2>'
+        '<div style="display:flex;align-items:center;gap:22px;'
+        'background:rgba(255,255,255,.45);border-radius:14px;'
+        'padding:18px 22px;text-align:left;">'
+        '<div style="flex-shrink:0;text-align:center;">'
+        + _img_tag +
+        '<div style="font-size:.75rem;font-weight:600;color:#E65100;margin-top:2px;">'
+        + _char_name +
+        '</div></div>'
+        '<div style="font-size:1rem;color:#333;line-height:1.55;">'
+        '&#128172; ' + _phrase +
+        '</div></div></div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Зберігаємо прогрес (один раз) ────────────────────────────────────────
     if not st.session_state.get("_progress_saved"):
         session.complete()
         st.session_state["_progress_saved"] = True
-        # ── Award lesson-completion XP + update streak ────────────────────
         try:
-            _llang = {"English":"en","Ukrainian":"uk","Spanish":"es","Korean":"ko"}.get(st.session_state.get("launcher_native","English"),"en")
-            _lres = on_lesson_complete(session.state.user_id, _llang)
+            _llang = {"English":"en","Ukrainian":"uk","Spanish":"es","Korean":"ko"}.get(
+                st.session_state.get("launcher_native","English"), "en")
+            _lres  = on_lesson_complete(session.state.user_id, _llang)
             _ltoasts = [f"🎉 Урок завершено! +{_lres['xp_earned']} XP бонус"]
             if _lres.get("leveled_up"):
                 _ltoasts.append(f"⭐ Новий рівень {_lres['level_num']}: {_lres['level_name']}!")
             for _bid, _bem, _bname, _bdesc in _lres.get("new_badges", []):
                 _ltoasts.append(f"{_bem} Бейдж «{_bname}»: {_bdesc}!")
             streak = _lres.get("streak_current", 0)
+            st.session_state["_cached_streak"] = streak
             if streak > 1:
                 _ltoasts.append(f"🔥 Серія {streak} {'день' if streak == 1 else 'днів'}!")
+            # Поліглот кожні 5 уроків — окремо під банером
+            _lessons_done = st.session_state.get("_total_lessons_done", 0) + 1
+            st.session_state["_total_lessons_done"] = _lessons_done
             st.session_state["_pending_toasts"] = (
                 st.session_state.get("_pending_toasts", []) + _ltoasts
             )
@@ -994,6 +1101,8 @@ def render_complete(session: LessonSession):
         if st.button("🔄 Redo lesson", use_container_width=True, type="primary"):
             st.session_state.pop("_progress_saved", None)
             _clear_lesson()
+            # Reset adaptive index so the sequence starts from step 1 again
+            st.session_state.pop("_adaptive_lesson_id", None)
             st.session_state["lesson_step"] = 1
             st.rerun()
     with c2:
@@ -1018,6 +1127,8 @@ def render_complete(session: LessonSession):
                     lesson_df = cfg["get_lesson"](df_all, next_id)
                     st.session_state.pop("_progress_saved", None)
                     _clear_lesson()
+                    # Clear adaptive so it reinitialises for the new lesson
+                    st.session_state.pop("_adaptive_lesson_id", None)
                     st.session_state.update({
                         "session":     LessonSession(state.user_id, lesson_df, next_id,
                                                      state.native_lang, state.target_lang,
@@ -1310,8 +1421,11 @@ def step8(session: LessonSession, tts_lang, wh_lang):
 
         if not any_corrected:
             st.success("✓ All phrases are grammatically correct!")
+            show_character("ai_bot", "on_lesson_complete")
         else:
             st.info("💡 Review the corrections above and practice the corrected versions.")
+            corrections_count = sum(1 for r in st.session_state.get("s8_results", []) if r.get("changed"))
+            show_character("ai_bot", "feedback", score=70, corrections=corrections_count)
 
     # ── Navigation ────────────────────────────────────────────────────────
     st.markdown("---")
@@ -1332,7 +1446,7 @@ def step8(session: LessonSession, tts_lang, wh_lang):
 # ═══════════════════════════════════════════════════════════════════════════
 def _clear_lesson():
     for k in list(st.session_state):
-        if k.startswith(("s1_","s2_","s3_","s4_","s5_","s6_","s7_","up_")):
+        if k.startswith(("s1_","s2_","s3_","s4_","s5_","s6_","s7_","s8_","up_")):
             del st.session_state[k]
 
 def _clear_all():
@@ -1467,6 +1581,85 @@ STEPS = {1: step1, 2: step2, 3: step3, 4: step4, 5: step5, 6: step6, 7: step7, 8
 # Steps that cannot be skipped
 REQUIRED_STEPS = {1, 3, 6, 7}
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Adaptive session initialiser
+# ═══════════════════════════════════════════════════════════════════════════
+def _init_adaptive_session(sess) -> None:
+    """
+    Determine and cache the adaptive step sequence for the current lesson.
+
+    • Called once per lesson (keyed by lesson_id so it auto-resets on lesson change).
+    • Reads the user's full log history (logs/{user_id}.csv) and trains the
+      RandomForest when ≥ MIN_SAMPLES (25) interactions are available.
+    • Stores in session_state:
+        _adaptive_steps  – ordered list, e.g. [1,4,5,6,7,8] or [1,2,3,4,5,6,7,8]
+        _adaptive_idx    – current position in that list (int, starts at 0)
+        _adaptive_mode   – "cold_start" | "adaptive"
+        _adaptive_lesson_id – lesson_id for which the above were computed
+    """
+    # Already initialised for this lesson?
+    if (st.session_state.get("_adaptive_lesson_id") == sess.state.lesson_id
+            and "_adaptive_steps" in st.session_state):
+        return
+
+    if not _ADAPTIVE_AVAILABLE:
+        st.session_state.update({
+            "_adaptive_steps":     _FULL_SEQ.copy(),
+            "_adaptive_idx":       0,
+            "_adaptive_mode":      "cold_start",
+            "_adaptive_lesson_id": sess.state.lesson_id,
+        })
+        return
+
+    engine = _AdaptiveEngine()
+
+    # Read ALL historical interactions for this user (one CSV per user)
+    try:
+        log_rows = sess.logger.read_all()
+    except Exception:
+        log_rows = []
+
+    engine.maybe_train(log_rows)
+
+    # Compute per-phrase features if we have data for this lesson's phrases
+    phrase_features: dict = {}
+    if log_rows and engine.mode == "adaptive":
+        try:
+            phrases = sess.phrases()
+            pid_set = {int(p.get("phrase_id", i)) for i, p in enumerate(phrases)}
+            subset  = [r for r in log_rows
+                       if int(r.get("phrase_id", -1)) in pid_set]
+            if subset:
+                sims  = [float(r["similarity"])       for r in subset]
+                times = [float(r["response_time_ms"]) for r in subset]
+                phrase_features = {
+                    "avg_similarity":    sum(sims)  / len(sims),
+                    "avg_response_time": sum(times) / len(times),
+                    "total_attempts":    len(subset),
+                }
+        except Exception:
+            pass
+
+    steps = engine.get_steps(phrase_features)
+
+    # If resuming mid-lesson, find the position of the current step in the sequence
+    current_step = st.session_state.get("lesson_step", 1)
+    try:
+        init_idx = steps.index(current_step)
+    except ValueError:
+        # Current step not in adaptive sequence (e.g. resuming at step 2 with SKIP_EASY)
+        # Fall back to the nearest prior step in the sequence
+        prior = [i for i, s in enumerate(steps) if s <= current_step]
+        init_idx = prior[-1] if prior else 0
+
+    st.session_state.update({
+        "_adaptive_steps":     steps,
+        "_adaptive_idx":       init_idx,
+        "_adaptive_mode":      engine.mode,
+        "_adaptive_lesson_id": sess.state.lesson_id,
+    })
+
 def main(module: str = "grammar"):
     """Entry point. `module` may be "grammar" or "vocab"."""
     # Remember the chosen module for downstream functions
@@ -1559,10 +1752,21 @@ def main(module: str = "grammar"):
                 f'</div>',
                 unsafe_allow_html=True
             )
-            step_pct = round((cur_step - 1) / 8 * 100, 0)
+            _adp_steps = st.session_state.get("_adaptive_steps", list(range(1, 9)))
+            _adp_idx   = st.session_state.get("_adaptive_idx", cur_step - 1)
+            _adp_total = len(_adp_steps)
+            _adp_pos   = _adp_idx + 1
+            step_pct   = round(_adp_idx / max(_adp_total, 1) * 100, 0)
+            _adp_mode  = st.session_state.get("_adaptive_mode", "cold_start")
+            _adp_badge = (
+                ' <span style="background:#1a3a1a;color:#34d0a0;font-size:.62rem;'
+                'padding:1px 6px;border-radius:10px;font-family:\'JetBrains Mono\',monospace;'
+                'vertical-align:middle">adaptive</span>'
+                if _adp_mode == "adaptive" else ""
+            )
             st.markdown(
                 f'<div class="progress-info">'
-                f'<span>Step {cur_step} / 8</span>'
+                f'<span>Step {_adp_pos} / {_adp_total}{_adp_badge}</span>'
                 f'<span>{"🔒" if cur_step in REQUIRED_STEPS else ""}</span></div>'
                 f'<div class="progress-bar-wrap">'
                 f'<div class="progress-bar-fill" style="width:{step_pct}%;background:linear-gradient(90deg, var(--mova-mint), #34D0A0)"></div></div>',
@@ -1575,12 +1779,16 @@ def main(module: str = "grammar"):
             st.caption("Step navigation")
             nav_c1, nav_c2 = st.columns(2)
             with nav_c1:
-                back_disabled = cur_step <= 1
+                _adp_idx_nav  = st.session_state.get("_adaptive_idx", 0)
+                back_disabled = _adp_idx_nav <= 0
                 if st.button("← Previous", disabled=back_disabled,
                              use_container_width=True, key="nav_back",
                              help="Go to the previous step"):
                     _clear_lesson()
-                    st.session_state["lesson_step"] = max(1, cur_step - 1)
+                    _prev_idx = max(0, _adp_idx_nav - 1)
+                    _prev_seq = st.session_state.get("_adaptive_steps", list(range(1, 9)))
+                    st.session_state["_adaptive_idx"] = _prev_idx
+                    st.session_state["lesson_step"]   = _prev_seq[_prev_idx]
                     st.rerun()
             with nav_c2:
                 if st.button("🔄 Repeat", use_container_width=True,
@@ -1590,14 +1798,33 @@ def main(module: str = "grammar"):
                     # lesson_step stays the same, but per-step state is wiped
                     st.rerun()
 
-            # Quick-jump dropdown — go to any step directly
-            # Clamp index to valid range (after step 8 cur_step becomes 9)
-            jump_default = min(max(cur_step, 1), 8) - 1
+            # Quick-jump dropdown — all 8 steps always visible;
+            # steps skipped by adaptive are marked "(+ optional)"
+            _adp_seq_nav  = st.session_state.get("_adaptive_steps", list(range(1, 9)))
+            _adp_idx_jump = st.session_state.get("_adaptive_idx", 0)
+            # Deduplicate adaptive seq (EXTRA_REPEAT may repeat step 2)
+            _seen_j: set = set()
+            _adp_unique = [s for s in _adp_seq_nav
+                           if not (s in _seen_j or _seen_j.add(s))]  # type: ignore
+            # Always offer all 8 steps; skipped ones go at end with "(+ optional)" label
+            _all_8 = list(range(1, 9))
+            _optional_steps = [s for s in _all_8 if s not in _adp_unique]
+            _full_options = _adp_unique + _optional_steps
+
+            def _step_label(s):
+                base = f"Step {s}"
+                if s in REQUIRED_STEPS:
+                    base += " \U0001f512"
+                if s in _optional_steps:
+                    base += "  (+ optional)"
+                return base
+
+            jump_default = min(_adp_idx_jump, len(_full_options) - 1)
             jump_to = st.selectbox(
                 "Jump to step",
-                options=list(range(1, 9)),
+                options=_full_options,
                 index=jump_default,
-                format_func=lambda s: f"Step {s}" + (" \U0001f512" if s in REQUIRED_STEPS else ""),
+                format_func=_step_label,
                 key="nav_jump",
             )
             if jump_to != cur_step:
@@ -1605,8 +1832,24 @@ def main(module: str = "grammar"):
                              use_container_width=True,
                              key="nav_go"):
                     _clear_lesson()
+                    if jump_to in _adp_seq_nav:
+                        # Step is in adaptive sequence — use its index normally
+                        _new_idx = _adp_seq_nav.index(jump_to)
+                        st.session_state["_adaptive_idx"] = _new_idx
+                    else:
+                        # Optional step (skipped by adaptive) — insert it after
+                        # current position so adaptive flow continues after it
+                        _cur_pos = st.session_state.get("_adaptive_idx", 0)
+                        _new_seq = (
+                            _adp_seq_nav[:_cur_pos] +
+                            [jump_to] +
+                            _adp_seq_nav[_cur_pos:]
+                        )
+                        st.session_state["_adaptive_steps"] = _new_seq
+                        st.session_state["_adaptive_idx"]   = _cur_pos
                     st.session_state["lesson_step"] = jump_to
                     st.rerun()
+
 
             # \u2500\u2500 Jump to lesson \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
             if module != "custom":
@@ -1638,6 +1881,8 @@ def main(module: str = "grammar"):
                                     f"-{cfg['lang_suffix']}")
                             _clear_lesson()
                             st.session_state.pop("_progress_saved", None)
+                            # Clear adaptive so it reinitialises for the new lesson
+                            st.session_state.pop("_adaptive_lesson_id", None)
                             st.session_state.update({
                                 "session":     LessonSession(
                                                    state.user_id, _ldf, _jump_lid,
@@ -1680,15 +1925,17 @@ def main(module: str = "grammar"):
     # Auto-save progress on every step (deduped by (lesson_id, step))
     _save_step_progress(sess, step)
 
-    # ── Show pending gamification toasts (queued after rerun) ────────────────
+    # \u2500\u2500 Initialise adaptive step sequence (once per lesson) \u2500\u2500\u2500\u2500\u2500\u2500
+    _init_adaptive_session(sess)
+
+    # \u2500\u2500 Show pending gamification toasts (queued after rerun) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     for _toast_msg in st.session_state.pop("_pending_toasts", []):
-        st.toast(_toast_msg, icon="🎉")
+        st.toast(_toast_msg, icon="\U0001f389")
 
     fn = STEPS.get(step)
     if fn:
         done = fn(sess, tts, wh)
         if done:
-            # ── Award XP for completed step ──────────────────────────────────
             try:
                 _sim = float(st.session_state.get("_last_similarity", 0.0))
                 _lang = {"English":"en","Ukrainian":"uk","Spanish":"es","Korean":"ko"}.get(st.session_state.get("launcher_native","English"),"en")
@@ -1704,7 +1951,15 @@ def main(module: str = "grammar"):
             except Exception:
                 pass
             _clear_lesson()
-            st.session_state["lesson_step"] = step + 1
+            # ── Adaptive navigation: advance to next step in sequence ─────
+            _adp_seq  = st.session_state.get("_adaptive_steps", list(range(1, 9)))
+            _adp_cur  = st.session_state.get("_adaptive_idx", 0)
+            _adp_next = _adp_cur + 1
+            st.session_state["_adaptive_idx"] = _adp_next
+            if _adp_next < len(_adp_seq):
+                st.session_state["lesson_step"] = _adp_seq[_adp_next]
+            else:
+                st.session_state["lesson_step"] = 9  # > 8 triggers lesson complete
             st.rerun()
-        # Optional steps already expose their own "Continue \u2192 / Done \u2192 / Skip \u2192"
+        # Optional steps already expose their own Continue / Done / Skip
         # button inside the step body, so no global skip button

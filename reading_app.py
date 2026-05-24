@@ -1502,9 +1502,15 @@ def main():
                 use_container_width=True,
                 key="sb_r_go_lid",
             ):
+                _new_rows = df[df["lesson_id"] == _jump_lid].reset_index(drop=True)
                 clear_step_state()
                 st.session_state["r_lesson"] = _jump_lid
+                st.session_state["r_rows"]   = _new_rows
                 st.session_state["r_step"]   = 1
+                st.session_state.pop("_r_progress_saved", None)
+                st.session_state.pop("_r_last_saved_progress", None)
+                st.session_state.pop("_r_gami_lesson_saved", None)
+                st.session_state.pop("_cached_r_streak", None)
                 st.rerun()
 
         st.markdown("---")
@@ -1544,14 +1550,55 @@ def main():
             except Exception:
                 pass
 
-        st.markdown("""
-        <div style="background:linear-gradient(135deg, var(--mova-mint-soft), var(--mova-indigo-soft));
-             border:1px solid var(--mova-mint);border-radius:16px;padding:40px;text-align:center">
-          <div style="font-size:3rem">&#x1F389;</div>
-          <h2 style="color:var(--mova-ink)">Урок завершено!</h2>
-        </div>""", unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        with c1:
+        # ── Персонаж у банері ────────────────────────────────────────────
+        try:
+            from engine.characters import get_phrase as _gp
+            _nat_lang = st.session_state.get("launcher_native", "Ukrainian")
+            _streak   = st.session_state.get("_cached_r_streak", 0)
+            _cat      = "on_streak" if _streak > 1 else "on_lesson_complete"
+            _cd       = _gp("natalia", _cat, lang=_nat_lang)
+            _phrase   = _cd["phrase"] if _cd else "Урок завершено! 🎉"
+            _cname    = _cd["name"]   if _cd else "Natalia"
+            _img_path = ROOT / "assets" / "characters" / "natalia.png"
+            import base64 as _b64
+            _ib64 = _b64.b64encode(_img_path.read_bytes()).decode() if _img_path.exists() else ""
+            _img_tag = (
+                '<img src="data:image/png;base64,' + _ib64 +
+                '" style="width:100px;height:100px;object-fit:cover;'
+                'border-radius:50%;border:3px solid var(--mova-mint);'
+                'box-shadow:0 4px 14px rgba(0,0,0,.15);margin-bottom:6px;" />'
+            ) if _ib64 else '<div style="font-size:3.5rem">\U0001f469\u200d\U0001f3eb</div>'
+        except Exception:
+            _phrase = "Урок завершено!"
+            _cname  = "Natalia"
+            _img_tag = '<div style="font-size:3.5rem">\U0001f469\u200d\U0001f3eb</div>'
+
+        st.markdown(
+            '<div style="background:linear-gradient(135deg,var(--mova-mint-soft),'
+            'var(--mova-indigo-soft));border:1px solid var(--mova-mint);'
+            'border-radius:16px;padding:32px 36px;text-align:center;">' +
+            '<div style="font-size:2.4rem;margin-bottom:6px;">\U0001f389</div>' +
+            '<h2 style="color:var(--mova-ink);margin:0 0 20px 0;">Урок завершено!</h2>' +
+            '<div style="display:flex;align-items:center;gap:20px;'
+            'background:rgba(255,255,255,.45);border-radius:14px;'
+            'padding:16px 20px;text-align:left;">' +
+            '<div style="flex-shrink:0;text-align:center;">' +
+            _img_tag +
+            '<div style="font-size:.75rem;font-weight:600;color:#E65100;margin-top:4px;">' +
+            _cname + '</div></div>' +
+            '<div style="font-size:.97rem;color:#333;line-height:1.55;">\U0001f4ac ' +
+            _phrase + '</div></div></div>',
+            unsafe_allow_html=True,
+        )
+
+        # ── Кнопки навігації ─────────────────────────────────────────────
+        _all_lids = sorted(df["lesson_id"].unique())
+        _next_lid = cur_lesson + 1
+        _has_next = _next_lid in _all_lids
+        _ncols    = 3 if _has_next else 2
+        _cols     = st.columns(_ncols)
+
+        with _cols[0]:
             if st.button("\U0001f504 Повторити", type="primary", use_container_width=True):
                 clear_step_state()
                 st.session_state["r_step"] = 1
@@ -1559,8 +1606,23 @@ def main():
                 st.session_state.pop("_r_last_saved_progress", None)
                 st.session_state.pop("_r_gami_lesson_saved", None)
                 st.rerun()
-        with c2:
-            if st.button("📚 Новий урок", use_container_width=True):
+
+        if _has_next:
+            with _cols[1]:
+                if st.button(f"\u25b6 Урок {_next_lid}", use_container_width=True, type="primary"):
+                    _next_rows = df[df["lesson_id"] == _next_lid].reset_index(drop=True)
+                    clear_step_state()
+                    st.session_state["r_lesson"] = _next_lid
+                    st.session_state["r_rows"]   = _next_rows
+                    st.session_state["r_step"]   = 1
+                    st.session_state.pop("_r_progress_saved", None)
+                    st.session_state.pop("_r_last_saved_progress", None)
+                    st.session_state.pop("_r_gami_lesson_saved", None)
+                    st.session_state.pop("_cached_r_streak", None)
+                    st.rerun()
+
+        with _cols[-1]:
+            if st.button("\U0001f4da Обрати урок", use_container_width=True):
                 clear_all()
                 st.rerun()
         return
