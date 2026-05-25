@@ -14,6 +14,7 @@ engine/character_widget.py — Streamlit-компонент для відобр�
     show_character("polyglot", "rare_bonus")
 """
 from __future__ import annotations
+import base64
 from pathlib import Path
 
 import streamlit as st
@@ -41,6 +42,18 @@ _EMOJI_FALLBACK: dict[str, str] = {
 
 # Папка з PNG-файлами персонажів
 _ASSETS_ROOT = Path(__file__).parent.parent / "assets" / "characters"
+
+
+@st.cache_data(show_spinner=False)
+def _img_to_b64(img_path: str) -> str:
+    """Повертає base64-рядок PNG для вбудовування в HTML <img>.
+    Кешується, щоб не читати файл при кожному рендері.
+    Використання повної роздільності через HTML дозволяє браузеру
+    коректно масштабувати зображення на high-DPI (Retina / мобільні) екранах,
+    уникаючи розмитості, яка виникає при серверному стисненні через st.image.
+    """
+    with open(img_path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
 
 
 def _get_lang() -> str:
@@ -87,7 +100,17 @@ def show_character(
 
     with col_img:
         if img_exists:
-            st.image(str(img_path), width=90)
+            # Відображаємо через HTML <img> з base64, щоб браузер сам
+            # масштабував повну роздільність — це усуває розмитість
+            # на мобільних Retina-екранах (яка виникає при st.image з width=90,
+            # бо Streamlit стискає зображення на сервері до 90px).
+            b64 = _img_to_b64(str(img_path))
+            st.markdown(
+                f'<img src="data:image/png;base64,{b64}" '
+                f'style="width:90px;height:auto;display:block;margin:0 auto;" '
+                f'loading="lazy">',
+                unsafe_allow_html=True,
+            )
         else:
             emoji = _EMOJI_FALLBACK.get(character_key, "🙂")
             st.markdown(

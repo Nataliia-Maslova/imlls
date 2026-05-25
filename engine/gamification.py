@@ -1,17 +1,19 @@
 """
-engine/gamification.py — Streak · XP · Levels · Badges
+engine/gamification.py — Streak · XP · Levels · Badges · Time
 
 Public API (all functions are safe to call even if the CSV is missing):
   load_stats(user_id)         → dict
   on_step_complete(user_id, step, similarity) → result dict
   on_lesson_complete(user_id) → result dict
   get_level(xp)               → (num, name, pct_in_level, xp_to_next)
-  sidebar_widget(user_id)     → renders compact streak/xp block via st.markdown
+  tick_time(user_id)          → adds elapsed time to total_time_minutes
+  sidebar_widget(user_id)     → renders compact streak/xp/time block via st.markdown
 """
 from __future__ import annotations
 
 import csv
 import json
+import time as _time
 from datetime import date, datetime
 from pathlib import Path
 
@@ -22,7 +24,12 @@ GAMI_CSV = DATA_DIR / "gamification.csv"
 _COLUMNS = [
     "user_id", "streak_current", "streak_max", "streak_last_date",
     "xp_total", "lessons_completed", "daily_xp_date", "daily_xp", "badges",
+    "total_time_minutes",
 ]
+
+# Maximum minutes counted per single time-flush interval.
+# Prevents counting idle time if the user left the tab open.
+_MAX_IDLE_MINUTES = 5
 
 # ─── XP table ────────────────────────────────────────────────────────────────
 #  step_xp: base XP for completing each step (1-8)
@@ -71,6 +78,10 @@ _UI: dict[str, dict[str, str]] = {
         "no_streak":   "0 days",
         "xp_next":     "+{n} XP to next level",
         "xp_max":      "Max level!",
+        "time_label":  "Study time",
+        "time_h":      "h",
+        "time_m":      "m",
+        "time_zero":   "< 1 m",
     },
     "uk": {
         "level":       "Рівень",
@@ -79,6 +90,10 @@ _UI: dict[str, dict[str, str]] = {
         "no_streak":   "0 днів",
         "xp_next":     "+{n} XP до наст. рівня",
         "xp_max":      "Максимальний рівень!",
+        "time_label":  "Час навчання",
+        "time_h":      "год",
+        "time_m":      "хв",
+        "time_zero":   "< 1 хв",
     },
     "es": {
         "level":       "Nivel",
@@ -87,6 +102,10 @@ _UI: dict[str, dict[str, str]] = {
         "no_streak":   "0 días",
         "xp_next":     "+{n} XP al siguiente nivel",
         "xp_max":      "¡Nivel máximo!",
+        "time_label":  "Tiempo de estudio",
+        "time_h":      "h",
+        "time_m":      "min",
+        "time_zero":   "< 1 min",
     },
     "ko": {
         "level":       "레벨",
@@ -95,6 +114,10 @@ _UI: dict[str, dict[str, str]] = {
         "no_streak":   "0일",
         "xp_next":     "다음 레벨까지 +{n} XP",
         "xp_max":      "최고 레벨!",
+        "time_label":  "학습 시간",
+        "time_h":      "시간",
+        "time_m":      "분",
+        "time_zero":   "< 1 분",
     },
 }
 
@@ -196,15 +219,16 @@ _BADGE_IDS = {b[0] for b in BADGE_DEFS_RAW}
 
 def _default_stats(user_id: str = "") -> dict:
     return {
-        "user_id":           user_id,
-        "streak_current":    0,
-        "streak_max":        0,
-        "streak_last_date":  "",
-        "xp_total":          0,
-        "lessons_completed": 0,
-        "daily_xp_date":     "",
-        "daily_xp":          0,
-        "badges":            set(),
+        "user_id":             user_id,
+        "streak_current":      0,
+        "streak_max":          0,
+        "streak_last_date":    "",
+        "xp_total":            0,
+        "lessons_completed":   0,
+        "daily_xp_date":       "",
+        "daily_xp":            0,
+        "badges":              set(),
+        "total_time_minutes":  0,
     }
 
 
@@ -227,15 +251,16 @@ def _write_csv(rows: list[dict]) -> None:
             if isinstance(badges_val, set):
                 badges_val = ",".join(sorted(badges_val))
             w.writerow({
-                "user_id":           r.get("user_id", ""),
-                "streak_current":    int(r.get("streak_current", 0)),
-                "streak_max":        int(r.get("streak_max", 0)),
-                "streak_last_date":  r.get("streak_last_date", ""),
-                "xp_total":          int(r.get("xp_total", 0)),
-                "lessons_completed": int(r.get("lessons_completed", 0)),
-                "daily_xp_date":     r.get("daily_xp_date", ""),
-                "daily_xp":          int(r.get("daily_xp", 0)),
-                "badges":            badges_val,
+                "user_id":            r.get("user_id", ""),
+                "streak_current":     int(r.get("streak_current", 0)),
+                "streak_max":         int(r.get("streak_max", 0)),
+                "streak_last_date":   r.get("streak_last_date", ""),
+                "xp_total":           int(r.get("xp_total", 0)),
+                "lessons_completed":  int(r.get("lessons_completed", 0)),
+                "daily_xp_date":      r.get("daily_xp_date", ""),
+                "daily_xp":           int(r.get("daily_xp", 0)),
+                "badges":             badges_val,
+                "total_time_minutes": round(float(r.get("total_time_minutes", 0)), 1),
             })
 
 
@@ -248,15 +273,16 @@ def _row_to_stats(row: dict) -> dict:
     else:
         badges = set()
     return {
-        "user_id":           str(row.get("user_id", "")),
-        "streak_current":    int(row.get("streak_current", 0) or 0),
-        "streak_max":        int(row.get("streak_max", 0) or 0),
-        "streak_last_date":  str(row.get("streak_last_date", "") or ""),
-        "xp_total":          int(row.get("xp_total", 0) or 0),
-        "lessons_completed": int(row.get("lessons_completed", 0) or 0),
-        "daily_xp_date":     str(row.get("daily_xp_date", "") or ""),
-        "daily_xp":          int(row.get("daily_xp", 0) or 0),
-        "badges":            badges,
+        "user_id":             str(row.get("user_id", "")),
+        "streak_current":      int(row.get("streak_current", 0) or 0),
+        "streak_max":          int(row.get("streak_max", 0) or 0),
+        "streak_last_date":    str(row.get("streak_last_date", "") or ""),
+        "xp_total":            int(row.get("xp_total", 0) or 0),
+        "lessons_completed":   int(row.get("lessons_completed", 0) or 0),
+        "daily_xp_date":       str(row.get("daily_xp_date", "") or ""),
+        "daily_xp":            int(row.get("daily_xp", 0) or 0),
+        "badges":              badges,
+        "total_time_minutes":  float(row.get("total_time_minutes", 0) or 0),
     }
 
 
@@ -387,7 +413,65 @@ def _check_badges(stats: dict, lang: str = "en") -> list[tuple[str, str, str, st
     return new
 
 
-# ═════════════════════════════════# ═══════════════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════
+# Public: time tracking
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _format_time(total_minutes: float, lang: str = "en") -> str:
+    """Format total minutes into a human-readable string (e.g. '2 год 15 хв')."""
+    total_minutes = max(0, int(total_minutes))
+    if total_minutes == 0:
+        return _t("time_zero", lang)
+    hours   = total_minutes // 60
+    minutes = total_minutes % 60
+    h_lbl   = _t("time_h", lang)
+    m_lbl   = _t("time_m", lang)
+    if hours > 0 and minutes > 0:
+        return f"{hours} {h_lbl} {minutes} {m_lbl}"
+    if hours > 0:
+        return f"{hours} {h_lbl}"
+    return f"{minutes} {m_lbl}"
+
+
+def tick_time(user_id: str) -> float:
+    """
+    Measure elapsed time since the last tick and add it to the user's
+    total_time_minutes in the CSV.
+
+    Call this at activity points (step complete, lesson complete).
+    Uses st.session_state to track the wall-clock start of the current interval.
+    Idle intervals longer than _MAX_IDLE_MINUTES are capped to avoid counting
+    time when the user left the browser tab open without doing anything.
+
+    Returns the number of minutes added in this call.
+    """
+    try:
+        import streamlit as st
+        now = _time.monotonic()
+        last = st.session_state.get("_gami_tick_last")
+
+        if last is None:
+            # First tick in this Streamlit session — start the clock, add nothing.
+            st.session_state["_gami_tick_last"] = now
+            return 0.0
+
+        elapsed_minutes = (now - last) / 60.0
+        # Cap to avoid counting long idle gaps
+        elapsed_minutes = min(elapsed_minutes, _MAX_IDLE_MINUTES)
+        st.session_state["_gami_tick_last"] = now
+
+        if elapsed_minutes < 0.01:
+            return 0.0
+
+        stats = load_stats(user_id)
+        stats["total_time_minutes"] = float(stats.get("total_time_minutes", 0)) + elapsed_minutes
+        save_stats(user_id, stats)
+        return elapsed_minutes
+    except Exception:
+        return 0.0
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Public: event hooks
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -399,6 +483,7 @@ def on_step_complete(user_id: str, step: int, similarity: float = 0.0, lang: str
         "leveled_up": bool, "new_badges": list[tuple]
     }
     """
+    tick_time(user_id)   # record elapsed time for this activity interval
     stats    = load_stats(user_id)
     old_xp   = int(stats.get("xp_total", 0))
     old_lvl, *_ = get_level(old_xp)
@@ -436,6 +521,7 @@ def on_lesson_complete(user_id: str, lang: str = "en") -> dict:
     Call when a whole lesson is finished (after step 8 or explicit completion).
     Returns same shape as on_step_complete plus streak info.
     """
+    tick_time(user_id)   # record elapsed time for this activity interval
     stats    = load_stats(user_id)
     old_xp   = int(stats.get("xp_total", 0))
     old_lvl, *_ = get_level(old_xp)
@@ -485,9 +571,15 @@ def sidebar_widget(user_id: str) -> None:
         native = st.session_state.get("launcher_native", "English")
         lang   = _NATIVE_TO_CODE.get(native, "en")
 
+        # initialise the session timer on first sidebar render
+        import time as _t_mod
+        if "_gami_tick_last" not in st.session_state:
+            st.session_state["_gami_tick_last"] = _t_mod.monotonic()
+
         stats  = load_stats(user_id)
         xp     = int(stats.get("xp_total", 0))
         streak = int(stats.get("streak_current", 0))
+        total_mins = float(stats.get("total_time_minutes", 0))
         level_num, level_name, pct, xp_to_next = get_level(xp, lang)
         badges  = stats.get("badges", set())
         pct_bar = round(pct * 100)
@@ -508,20 +600,31 @@ def sidebar_widget(user_id: str) -> None:
         xp_hint = (_t("xp_next", lang, n=xp_to_next) if xp_to_next > 0
                    else _t("xp_max", lang))
 
-        badge_icons = "".join(b[1] for b in BADGE_DEFS_RAW if b[0] in badges)[:10]
+        badge_icons  = "".join(b[1] for b in BADGE_DEFS_RAW if b[0] in badges)[:10]
+        time_str     = _format_time(total_mins, lang)
+        time_label   = _t("time_label", lang)
 
         st.markdown(
             f'<div style="background:var(--mova-card);border:1px solid var(--mova-line);'
             f'border-radius:10px;padding:10px 12px;margin-bottom:8px">'
+            # row 1: streak + level
             f'<div style="display:flex;justify-content:space-between;align-items:center">'
             f'<span style="color:{streak_color};font-size:1rem;font-weight:700">🔥 {streak_label}</span>'
             f'<span style="color:var(--mova-indigo-ink);font-size:.8rem;font-weight:600">'
             f'{_t("level", lang)} {level_num} · {level_name}</span>'
             f'</div>'
+            # XP progress bar
             f'{bar_html}'
+            # row 2: XP + hint
             f'<div style="display:flex;justify-content:space-between;align-items:center">'
             f'<span style="color:var(--mova-ink);font-size:.8rem;font-weight:600">⭐ {xp} XP</span>'
             f'<span style="color:var(--mova-ink-3);font-size:.68rem">{xp_hint}</span>'
+            f'</div>'
+            # row 3: total study time
+            f'<div style="display:flex;align-items:center;margin-top:7px;gap:6px">'
+            f'<span style="font-size:.85rem">⏱</span>'
+            f'<span style="color:var(--mova-ink-3);font-size:.72rem">{time_label}:</span>'
+            f'<span style="color:var(--mova-ink);font-size:.8rem;font-weight:600">{time_str}</span>'
             f'</div>'
             + (f'<div style="margin-top:5px;font-size:.9rem;letter-spacing:2px">{badge_icons}</div>'
                if badge_icons else '')
