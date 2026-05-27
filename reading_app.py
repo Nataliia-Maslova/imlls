@@ -21,6 +21,7 @@ reading_app.py  —  IMLLS Reading Practice
 """
 
 import asyncio
+import json
 import base64
 import hashlib
 import random
@@ -1198,6 +1199,35 @@ def render_setup():
             st.query_params.clear()
             st.rerun()
 
+
+    # ── Query-params bridge: wave clicked a lesson ────────────────────────────
+    _qp = st.query_params
+    if "vnav_lesson" in _qp:
+        try:
+            from urllib.parse import unquote as _uq
+            _qp_lid  = int(_qp["vnav_lesson"])
+            _qp_lang = _uq(_qp.get("r_lang", "en"))
+            _qp_user = _uq(_qp.get("vnav_user", "student1"))
+            if _qp_lang not in TTS_CONFIG:
+                _qp_lang = "en"
+            _qp_native = st.session_state.get("launcher_native", "Ukrainian")
+            st.query_params.clear()
+            _qp_df   = load(str(DB_PATH), lang=_qp_lang, native_lang=_qp_native)
+            _qp_rows = _qp_df[_qp_df["lesson_id"] == _qp_lid].reset_index(drop=True)
+            if not _qp_rows.empty:
+                st.session_state.update({
+                    "r_lang":   _qp_lang,
+                    "r_lesson": _qp_lid,
+                    "r_user":   _qp_user,
+                    "r_rows":   _qp_rows,
+                    "r_step":   1,
+                })
+                st.session_state.pop("_r_progress_saved", None)
+                st.session_state.pop("_r_last_saved_progress", None)
+                st.rerun()
+        except Exception:
+            st.query_params.clear()
+
     st.markdown("""
     <div style="text-align:center;padding:36px 0 20px">
       <div style="font-size:3rem">📖</div>
@@ -1262,61 +1292,25 @@ def render_setup():
                 resume_step = max(1, min(5, saved_step))
                 resume_msg  = f"⏯ Повернешся до уроку {saved_lesson} на крок {resume_step}"
 
-    # Sync selectbox index with session state (kept in sync with sidebar ◀ ▶)
-    _idx_key = "r_setup_sel_idx"
-    if (_idx_key not in st.session_state
-            or st.session_state.get("_r_setup_lang") != chosen_lang):
-        st.session_state[_idx_key]      = default_idx
-        st.session_state["_r_setup_lang"] = chosen_lang
-    _cur_idx = min(int(st.session_state[_idx_key]), len(lessons) - 1)
-    lesson_id = st.selectbox(
-        "📚 Урок", lessons,
-        index=_cur_idx,
-        format_func=lambda x: f"Урок {x} — {len(df[df['lesson_id']==x])} рядків",
-        key="r_lesson_sel",
+    # ── Wave navigator ───────────────────────────────────────────────────────
+    from grammar import _build_wave_html as _bwh
+    _lesson_data = json.dumps([
+        {"gid": int(lid),
+         "name": f"Урок {lid}",
+         "phrases": int((df["lesson_id"] == lid).sum())}
+        for lid in lessons
+    ])
+    _wave_html = _bwh(
+        lesson_data_json=_lesson_data,
+        default_gid=int(lessons[default_idx]),
+        native="", target="",
+        user_id=user_id,
+        resume_step=resume_step,
+        extra_params={"r_lang": chosen_lang},
     )
-    # If user changed selectbox manually, sync back to session state
-    _sel_idx = lessons.index(lesson_id)
-    if _sel_idx != _cur_idx:
-        st.session_state[_idx_key] = _sel_idx
-
-    rows = df[df["lesson_id"] == lesson_id].reset_index(drop=True)
-    has_trans = chosen_lang != "ko"  # Korean has no transcription
-
-    st.markdown(f"**{len(rows)} слів/рядків у цьому уроці:**")
-    preview = "".join(
-        '<div style="display:flex;gap:14px;padding:8px 14px;background:var(--mova-card);'
-        'border-bottom:1px solid var(--mova-line);align-items:center">'
-        f'<span style="min-width:24px;color:var(--mova-indigo-ink);font-family:JetBrains Mono,monospace;font-size:.75rem">{i+1:02d}</span>'
-        f'<span style="flex:1;font-size:1rem;color:var(--mova-ink)">{row["word"]}</span>'
-        + (f'<span style="color:var(--mova-indigo);font-family:JetBrains Mono,monospace;font-size:.85rem">{row["transcription"]}</span>'
-           if has_trans and row["transcription"] else '')
-        + ('<span style="color:var(--mova-ink-3);font-size:.75rem;margin-left:8px">'
-           + row["rule"][:40] + '...</span>' if len(row["rule"]) > 5 else '')
-        + '</div>'
-        for i, (_, row) in enumerate(rows.iterrows())
-    )
-    st.markdown(
-        f'<div style="border-radius:10px;overflow:hidden;max-height:280px;overflow-y:auto">'
-        f'{preview}</div>',
-        unsafe_allow_html=True,
-    )
-
-    start_at_step = resume_step if (progress and lesson_id == lessons[default_idx]) else 1
-    if resume_msg and lesson_id == lessons[default_idx]:
+    if resume_msg:
         st.info(resume_msg)
-
-    st.markdown("")
-    btn_label = f"▶ Продовжити з кроку {start_at_step}" if start_at_step > 1 else "▶ Почати урок"
-    if st.button(btn_label, type="primary", use_container_width=True):
-        st.session_state["r_lang"]   = chosen_lang
-        st.session_state["r_lesson"] = int(lesson_id)
-        st.session_state["r_user"]   = user_id
-        st.session_state["r_rows"]   = rows
-        st.session_state["r_step"]   = start_at_step
-        st.session_state.pop("_r_progress_saved", None)
-        st.session_state.pop("_r_last_saved_progress", None)
-        st.rerun()
+    components.html(_wave_html, height=265, scrolling=False)
 
 
 # ═══════════════════════════════════════════════════════════════════════════

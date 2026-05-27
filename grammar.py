@@ -5,7 +5,7 @@ JS MediaRecorder for in-browser audio capture.
 
 Run: streamlit run app.py
 """
-import sys, base64, random, time
+import sys, base64, random, time, json
 from pathlib import Path
 
 import streamlit as st
@@ -1147,6 +1147,307 @@ def render_complete(session: LessonSession):
             st.rerun()
 
 
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Hierarchical vocabulary navigator (Category -> Topic -> Lesson)
+# ═══════════════════════════════════════════════════════════════════════════
+
+_VOCAB_CATEGORIES = [
+    {
+        "id": "speaking", "icon": "\U0001f5e3\ufe0f", "name": "Communication",
+        "desc": "Greetings, questions, emergencies",
+        "sheets": [
+            "Greetings, Basics & Courtesy",
+            "Questions, Directions & Emergen",
+            "Daily Life, Routine & Feelings",
+        ],
+    },
+    {
+        "id": "wordbank", "icon": "\U0001f4da", "name": "Word Bank",
+        "desc": "Core vocabulary: adjectives, verbs, food, city (words + sentences)",
+        "sheets": ["Basic", "Verbs", "Food", "City"],
+    },
+    {
+        "id": "situations", "icon": "\U0001f30d", "name": "Situations",
+        "desc": "Restaurant, travel, shopping, work, school",
+        "sheets": [
+            "Restaurant, Food & Shopping", "Travel, Lodging & Weather",
+            "Shopping", "At the Doctor", "Work", "School", "Travel", "Restaurant",
+        ],
+    },
+    {
+        "id": "people", "icon": "\U0001f465", "name": "People",
+        "desc": "Friends, family, emotions, relationships",
+        "sheets": ["Friends and Relationships", "Family", "Emotions"],
+    },
+    {
+        "id": "home", "icon": "\U0001f3e0", "name": "Home & Routine",
+        "desc": "Home, daily routine, weather, clothes, transport",
+        "sheets": [
+            "House and Home", "Daily Routine", "Weather",
+            "Clothes", "Transport", "Hobbies", "Food and Drinks",
+        ],
+    },
+    {
+        "id": "leisure", "icon": "\U0001f389", "name": "Leisure",
+        "desc": "Sports, holidays, technology, city",
+        "sheets": ["Sports", "Holidays", "Technology", "City and Directions"],
+    },
+]
+
+_TOPIC_META = {
+    # Word Bank (Type A \u2014 words + sentences)
+    "Basic":                           ("\U0001f524", "Basic Adjectives & Words"),
+    "Verbs":                           ("\u26a1",     "Verbs"),
+    "Food":                            ("\U0001f34e", "Food Vocabulary"),
+    "City":                            ("\U0001f3d9\ufe0f", "City & Shopping"),
+    # Communication
+    "Greetings, Basics & Courtesy":    ("\U0001f44b", "Greetings & Courtesy"),
+    "Questions, Directions & Emergen": ("\u2753",      "Questions, Directions & Emergencies"),
+    "Daily Life, Routine & Feelings":  ("\u2600\ufe0f","Daily Life, Routine & Feelings"),
+    # Situations
+    "Restaurant, Food & Shopping":     ("\U0001f37d\ufe0f", "Restaurant, Food & Shopping"),
+    "Travel, Lodging & Weather":       ("\u2708\ufe0f",     "Travel, Lodging & Weather"),
+    "Shopping":                        ("\U0001f6cd\ufe0f", "Shopping"),
+    "At the Doctor":                   ("\U0001f3e5",        "At the Doctor"),
+    "Work":                            ("\U0001f4bc",        "Work"),
+    "School":                          ("\U0001f393",        "School"),
+    "Travel":                          ("\U0001f5fa\ufe0f", "Travel"),
+    "Restaurant":                      ("\U0001f374",        "Restaurant"),
+    "Friends and Relationships":       ("\U0001f91d",        "Friends & Relationships"),
+    "Family":                          ("\U0001f46a",        "Family"),
+    "Emotions":                        ("\U0001f60a",        "Emotions"),
+    "House and Home":                  ("\U0001f3e1",        "House and Home"),
+    "Daily Routine":                   ("\u23f0",            "Daily Routine"),
+    "Weather":                         ("\U0001f324\ufe0f", "Weather"),
+    "Clothes":                         ("\U0001f457",        "Clothes"),
+    "Transport":                       ("\U0001f68c",        "Transport"),
+    "Hobbies":                         ("\U0001f3a8",        "Hobbies"),
+    "Food and Drinks":                 ("\U0001f957",        "Food and Drinks"),
+    "Sports":                          ("\u26bd",            "Sports"),
+    "Holidays":                        ("\U0001f384",        "Holidays"),
+    "Technology":                      ("\U0001f4bb",        "Technology"),
+    "City and Directions":             ("\U0001f5fa\ufe0f", "City and Directions"),
+}
+
+
+def _build_wave_html(lesson_data_json, default_gid, native, target, user_id, resume_step, extra_params=None):
+    """Generate the self-contained HTML for the horizontal wave lesson picker."""
+    from urllib.parse import quote as _q
+    n_enc = _q(native)
+    t_enc = _q(target)
+    u_enc = _q(user_id or "student1")
+    import json as _json
+    _ep = extra_params or {}
+    extra_params_js = _json.dumps(_ep)
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:transparent;overflow-x:hidden}}
+.wo{{width:100%;overflow-x:auto;overflow-y:visible;padding:4px 0 8px;scrollbar-width:thin;scrollbar-color:#ccc transparent}}
+.wo::-webkit-scrollbar{{height:4px}}
+.wo::-webkit-scrollbar-thumb{{background:#ccc;border-radius:2px}}
+.wi{{position:relative;height:190px}}
+.wsvg{{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}}
+.ln{{position:absolute;transform:translateX(-50%);cursor:pointer;text-align:center;width:88px;transition:transform .15s;user-select:none}}
+.ln:hover{{transform:translateX(-50%) scale(1.1)}}
+.ln.act{{transform:translateX(-50%) scale(1.06)}}
+.nc{{width:66px;height:66px;border-radius:50%;margin:0 auto 5px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;border:3px solid transparent;transition:border-color .15s;position:relative}}
+.ln.act .nc{{border-color:#7F77DD;box-shadow:0 0 0 4px rgba(127,119,221,.18)}}
+.nl{{font-size:11px;line-height:1.3;color:#777;max-width:86px;margin:0 auto}}
+.ln.act .nl{{color:#534AB7;font-weight:600}}
+.nb{{position:absolute;top:-5px;right:-5px;width:20px;height:20px;background:#534AB7;color:#fff;border-radius:50%;font-size:9px;font-weight:700;display:none;align-items:center;justify-content:center;border:2px solid #fff}}
+.ln.act .nb{{display:flex}}
+.sb{{display:block;width:200px;margin:6px auto 0;padding:9px 0;background:#7F77DD;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}}
+.sb:hover{{background:#534AB7}}
+.it{{text-align:center;font-size:11px;color:#999;margin-top:3px}}
+</style></head><body>
+<div class="wo" id="wo"><div class="wi" id="wi"><svg class="wsvg" id="ws"></svg></div></div>
+<button class="sb" id="sb" onclick="go()">&#9654; Start Lesson</button>
+<p class="it" id="it"></p>
+<script>
+const LS={lesson_data_json};
+const DG={default_gid};
+const RS={resume_step};
+const NE="{n_enc}",TE="{t_enc}",UE="{u_enc}";
+const CL=['#CECBF6','#9FE1CB','#F5C4B3','#B5D4F4','#C0DD97','#FAC775','#F4C0D1','#D3D1C7'];
+const EM=['📖','🌟','💡','🎯','🔤','🗣️','✏️','📝','🎓','💬','🔑','🏆'];
+let sg=DG;
+function build(){{
+  const n=LS.length;if(!n)return;
+  const cw=104,pad=56,W=Math.max(680,n*cw+pad*2);
+  const wi=document.getElementById('wi');wi.style.minWidth=W+'px';
+  const svg=document.getElementById('ws'),H=190,my=H/2,amp=52;
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  const pts=[];
+  for(let i=0;i<n;i++){{
+    const x=pad+i*(W-pad*2)/Math.max(n-1,1);
+    const y=my-Math.sin(i*Math.PI/2.8)*amp;
+    pts.push({{x,y}});
+  }}
+  let d='M '+pts[0].x+' '+pts[0].y;
+  for(let i=1;i<pts.length;i++){{
+    const mx=(pts[i-1].x+pts[i].x)/2;
+    d+=' C '+mx+' '+pts[i-1].y+' '+mx+' '+pts[i].y+' '+pts[i].x+' '+pts[i].y;
+  }}
+  svg.innerHTML='<path d="'+d+'" fill="none" stroke="#D3D1C7" stroke-width="4" stroke-linecap="round"/>';
+  wi.querySelectorAll('.ln').forEach(e=>e.remove());
+  pts.forEach((p,i)=>{{
+    const l=LS[i];
+    const div=document.createElement('div');
+    div.className='ln'+(l.gid===sg?' act':'');
+    div.style.left=p.x+'px';div.style.top=(p.y-44)+'px';
+    div.innerHTML='<div class="nc" style="background:'+CL[i%CL.length]+'">'+EM[i%EM.length]+'<div class="nb">'+(i+1)+'</div></div><div class="nl">'+l.name+'</div>';
+    div.onclick=()=>sel(l.gid);
+    wi.appendChild(div);
+  }});
+  upd();
+  const ai=LS.findIndex(l=>l.gid===sg);
+  if(ai>2){{const wo=document.getElementById('wo');setTimeout(()=>{{wo.scrollLeft=pts[ai].x-wo.offsetWidth/2}},80);}}
+}}
+function sel(gid){{
+  sg=gid;
+  document.querySelectorAll('.ln').forEach((el,i)=>{{el.className='ln'+(LS[i].gid===gid?' act':'');}});
+  upd();
+}}
+function upd(){{
+  const l=LS.find(x=>x.gid===sg)||LS[0];if(!l)return;
+  const isR=(l.gid===DG&&RS>1);
+  document.getElementById('sb').textContent=isR?'▶ Resume at Step '+RS:'▶ Start Lesson';
+  document.getElementById('it').textContent=l.name+' · '+l.phrases+' phrases';
+}}
+const EP={extra_params_js};
+function go(){{
+  if(!sg)return;
+  let u='?vnav_lesson='+sg+'&vnav_native='+NE+'&vnav_target='+TE+'&vnav_user='+UE;
+  for(const[k,v]of Object.entries(EP))u+='&'+k+'='+encodeURIComponent(v);
+  window.parent.location.href=u;
+}}
+build();
+</script></body></html>"""
+
+
+def _render_flat_wave_nav(
+    df, cfg, lang_pair, native, target, user_id,
+    lessons, default_idx, resume_step, resume_msg, progress,
+    counts_by_lid, topics_map,
+):
+    """Flat wave lesson picker — all lessons on one scrollable wave."""
+
+    if resume_msg:
+        st.info(resume_msg)
+
+    default_gid = lessons[default_idx]
+
+    def _lesson_name(lid):
+        if topics_map and lid in topics_map:
+            return topics_map[lid]
+        return f"{cfg['lesson_word']} {lid}"
+
+    lesson_data_json = json.dumps([
+        {"gid": lid, "name": _lesson_name(lid),
+         "phrases": counts_by_lid.get(lid, 0)}
+        for lid in lessons
+    ])
+
+    wave_html = _build_wave_html(
+        lesson_data_json=lesson_data_json,
+        default_gid=default_gid,
+        native=native,
+        target=target,
+        user_id=user_id,
+        resume_step=resume_step,
+    )
+    components.html(wave_html, height=265, scrolling=False)
+
+def _render_vocab_nav(
+    df, cfg, db_path, lang_pair, native, target, user_id,
+    lessons, default_idx, resume_step, resume_msg, progress, counts_by_lid,
+):
+    """
+    Compact vocab picker: two dropdowns (Category → Topic) + horizontal wave
+    lesson path. Clicking a lesson card navigates via query params.
+    """
+    from engine.vocab_loader import get_vocab_nav_data
+
+    nav_data       = get_vocab_nav_data(str(db_path))
+    available_gids = set(lessons)
+
+    # ── Resume banner ─────────────────────────────────────────────────────────
+    if resume_msg:
+        st.info(resume_msg)
+
+    # ── Dropdown 1: Category ──────────────────────────────────────────────────
+    cat_names = [f'{c["icon"]} {c["name"]}' for c in _VOCAB_CATEGORIES]
+    cat_ids   = [c["id"] for c in _VOCAB_CATEGORIES]
+
+    prev_cat_id  = st.session_state.get("vocab_nav_cat", cat_ids[0])
+    prev_cat_idx = cat_ids.index(prev_cat_id) if prev_cat_id in cat_ids else 0
+
+    sel_cat_name = st.selectbox("Category", cat_names, index=prev_cat_idx,
+                                key="vnav_sel_category")
+    sel_cat_idx = cat_names.index(sel_cat_name)
+    sel_cat     = _VOCAB_CATEGORIES[sel_cat_idx]
+    sel_cat_id  = sel_cat["id"]
+    st.session_state["vocab_nav_cat"] = sel_cat_id
+
+    # ── Dropdown 2: Topic ─────────────────────────────────────────────────────
+    sheets_in_cat = [s for s in sel_cat["sheets"] if s in nav_data]
+    if not sheets_in_cat:
+        st.warning("No topics available for the selected language pair.")
+        return
+
+    topic_labels = []
+    for s in sheets_in_cat:
+        icon, label = _TOPIC_META.get(s, ("\U0001f4d6", s))
+        n = len(nav_data.get(s, []))
+        topic_labels.append(f"{icon} {label}  ({n} lessons)")
+
+    prev_sheet = st.session_state.get("vocab_nav_topic", sheets_in_cat[0])
+    if prev_sheet not in sheets_in_cat:
+        prev_sheet = sheets_in_cat[0]
+    prev_topic_idx = sheets_in_cat.index(prev_sheet)
+
+    sel_topic_label = st.selectbox(
+        "Topic", topic_labels, index=prev_topic_idx,
+        key=f"vnav_sel_topic_{sel_cat_id}",
+    )
+    sel_topic_idx = topic_labels.index(sel_topic_label)
+    sel_sheet     = sheets_in_cat[sel_topic_idx]
+    st.session_state["vocab_nav_topic"] = sel_sheet
+
+    # ── Wave component ────────────────────────────────────────────────────────
+    lessons_in = nav_data.get(sel_sheet, [])
+    radio_opts = [l for l in lessons_in if l["gid"] in available_gids]
+
+    if not radio_opts:
+        st.warning("No lessons available for this topic and language pair.")
+        return
+
+    default_gid = lessons[default_idx]
+    if default_gid not in {l["gid"] for l in radio_opts}:
+        default_gid = radio_opts[0]["gid"]
+
+    lesson_data_json = json.dumps([
+        {"gid": l["gid"], "name": l["name"],
+         "phrases": counts_by_lid.get(l["gid"], 0)}
+        for l in radio_opts
+    ])
+
+    wave_html = _build_wave_html(
+        lesson_data_json=lesson_data_json,
+        default_gid=default_gid,
+        native=native,
+        target=target,
+        user_id=user_id,
+        resume_step=resume_step,
+    )
+
+    components.html(wave_html, height=265, scrolling=False)
+
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Setup screen
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1165,6 +1466,39 @@ def render_setup():
     if not db_path.exists():
         st.error(f"Database not found: `{db_path}`\n\nPlace the file in the `data/` folder.")
         st.stop()
+
+    # ── Query-params bridge: wave clicked a lesson (all modules) ──────────────
+    if cfg.get("load") is not None:
+        _qp = st.query_params
+        if "vnav_lesson" in _qp:
+            try:
+                from urllib.parse import unquote as _uq
+                _qp_lid    = int(_qp["vnav_lesson"])
+                _qp_native = _uq(_qp.get("vnav_native", "English"))
+                _qp_target = _uq(_qp.get("vnav_target", "Ukrainian"))
+                _qp_user   = _uq(_qp.get("vnav_user",   "student1"))
+                if _qp_native not in LANGUAGES:
+                    _qp_native = "English"
+                if _qp_target not in LANGUAGES or _qp_target == _qp_native:
+                    _qp_target = next(l for l in LANGUAGES if l != _qp_native)
+                st.query_params.clear()
+                _qp_df        = cfg["load"](str(db_path), _qp_native, _qp_target)
+                _qp_lesson_df = cfg["get_lesson"](_qp_df, _qp_lid)
+                if not _qp_lesson_df.empty:
+                    _qp_lp = (f"{WHISPER_LANG.get(_qp_native,'?')}"
+                              f"-{WHISPER_LANG.get(_qp_target,'?')}-{cfg['lang_suffix']}")
+                    st.session_state.update({
+                        "session":     LessonSession(_qp_user, _qp_lesson_df,
+                                                     _qp_lid, _qp_native, _qp_target,
+                                                     language_pair=_qp_lp),
+                        "lesson_step": 1,
+                        "tts_lang":    TTS_LANG.get(_qp_target, "en"),
+                        "wh_lang":     WHISPER_LANG.get(_qp_target),
+                        "lang_pair":   _qp_lp,
+                    })
+                    st.rerun()
+            except Exception:
+                st.query_params.clear()
 
     # Pre-fill from the launcher if the user picked language / username there
     default_native = st.session_state.get("launcher_native", "English")
@@ -1239,45 +1573,29 @@ def render_setup():
     else:
         topics_map = None
 
-    # Pre-compute phrase counts so we can show them in the dropdown label
+    # Pre-compute phrase counts (used by grammar selectbox and vocab nav)
     counts_by_lid = df.groupby("lesson_id").size().to_dict() if not df.empty else {}
 
-    def _fmt(lid):
-        n = counts_by_lid.get(lid, 0)
-        if topics_map and lid in topics_map:
-            # Grammar: "Lesson 1 — Article a/an + adj + noun (8 phrases)"
-            # Vocab:   "Family — Lesson 1 (8 phrases)"
-            if cfg["topics"] == "from_df":
-                return f"{cfg['lesson_word']} {lid} — {topics_map[lid]} ({n} phrases)"
-            return f"{topics_map[lid]} ({n} phrases)"
-        # Fallback: classic "Lesson N"
-        return f"{cfg['lesson_word']} {lid}"
+    # ── Vocabulary: hierarchical navigator ───────────────────────────────────
+    if module == "vocab":
+        _render_vocab_nav(
+            df=df, cfg=cfg, db_path=db_path, lang_pair=lang_pair,
+            native=native, target=target, user_id=user_id,
+            lessons=lessons, default_idx=default_idx,
+            resume_step=resume_step, resume_msg=resume_msg,
+            progress=progress, counts_by_lid=counts_by_lid,
+        )
+        return  # nav handles st.rerun internally
 
-    selector_label = f"📚 {cfg['label']} lesson"
-    lesson_id = st.selectbox(selector_label, lessons,
-                              index=default_idx,
-                              format_func=_fmt)
-    lesson_df = cfg["get_lesson"](df, lesson_id)
-    st.caption(f"**{len(lesson_df)} phrases** · pair: `{lang_pair}`")
-
-    # If user changed the lesson dropdown to something other than the resume lesson,
-    # start fresh at step 1; otherwise honour the saved step.
-    start_at_step = resume_step if (progress and lesson_id == lessons[default_idx]) else 1
-    if resume_msg and lesson_id == lessons[default_idx]:
-        st.info(resume_msg)
-
-    btn_label = f"▶ Resume at Step {start_at_step}" if start_at_step > 1 else "▶ Start Lesson"
-    if st.button(btn_label, type="primary", use_container_width=True):
-        st.session_state.update({
-            "session":      LessonSession(user_id, lesson_df, lesson_id,
-                                          native, target,
-                                          language_pair=lang_pair),
-            "lesson_step":  start_at_step,
-            "tts_lang":     TTS_LANG.get(target, "en"),
-            "wh_lang":      WHISPER_LANG.get(target),
-            "lang_pair":    lang_pair,
-        })
-        st.rerun()
+    # ── Grammar / Reading: wave navigator ───────────────────────────────────
+    _render_flat_wave_nav(
+        df=df, cfg=cfg, lang_pair=lang_pair,
+        native=native, target=target, user_id=user_id,
+        lessons=lessons, default_idx=default_idx,
+        resume_step=resume_step, resume_msg=resume_msg,
+        progress=progress, counts_by_lid=counts_by_lid,
+        topics_map=topics_map,
+    )
 
 
 
@@ -1952,14 +2270,4 @@ def main(module: str = "grammar"):
                 pass
             _clear_lesson()
             # ── Adaptive navigation: advance to next step in sequence ─────
-            _adp_seq  = st.session_state.get("_adaptive_steps", list(range(1, 9)))
-            _adp_cur  = st.session_state.get("_adaptive_idx", 0)
-            _adp_next = _adp_cur + 1
-            st.session_state["_adaptive_idx"] = _adp_next
-            if _adp_next < len(_adp_seq):
-                st.session_state["lesson_step"] = _adp_seq[_adp_next]
-            else:
-                st.session_state["lesson_step"] = 9  # > 8 triggers lesson complete
-            st.rerun()
-        # Optional steps already expose their own Continue / Done / Skip
-        # button inside the step body, so no global skip button
+       

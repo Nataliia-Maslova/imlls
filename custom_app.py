@@ -12,7 +12,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import json
 import streamlit as st
+import streamlit.components.v1 as components
 
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
@@ -40,6 +42,26 @@ def _inject_css():
 
 def render_setup():
     _inject_css()
+
+    # ── Query-params bridge: wave clicked a lesson ────────────────────────────
+    _qp = st.query_params
+    if "vnav_lesson" in _qp:
+        try:
+            from urllib.parse import unquote as _uq
+            _qp_lid    = int(_qp["vnav_lesson"])
+            _qp_native = _uq(_qp.get("vnav_native", "Ukrainian"))
+            _qp_target = _uq(_qp.get("vnav_target", "English"))
+            _qp_user   = _uq(_qp.get("vnav_user",   "student1"))
+            if _qp_native not in LANGUAGES:
+                _qp_native = "Ukrainian"
+            if _qp_target not in LANGUAGES or _qp_target == _qp_native:
+                _qp_target = next(l for l in LANGUAGES if l != _qp_native)
+            st.query_params.clear()
+            _qp_lp = f"{WHISPER_LANG.get(_qp_native,'?')}-{WHISPER_LANG.get(_qp_target,'?')}-custom"
+            _start_lesson(_qp_user, _qp_lid, _qp_native, _qp_target, _qp_lp)
+        except Exception:
+            st.query_params.clear()
+
 
     # ── Sidebar: always visible on setup screen ───────────────────────────────
     _MODS = [
@@ -123,28 +145,42 @@ def render_setup():
     if lessons_df.empty:
         st.info("Поки що жодного уроку для цієї пари. Створіть перший нижче ↓")
     else:
-        for _, row in lessons_df.iterrows():
-            lid = int(row["lesson_id"])
-            with st.container():
-                c1, c2, c3, c4 = st.columns([5, 1.2, 1.2, 1.2])
-                with c1:
-                    st.markdown(
-                        f"**{row['lesson_name']}** "
-                        f"<span style='color:var(--mova-ink-3);font-size:.8rem'>· {row['phrases']} phrases · id {lid}</span>",
-                        unsafe_allow_html=True,
-                    )
-                with c2:
-                    if st.button("▶ Start", key=f"cu_start_{lid}",
-                                 type="primary", use_container_width=True):
-                        _start_lesson(user_id, lid, native, target, lang_pair)
-                with c3:
-                    if st.button("✏ Edit name", key=f"cu_edit_{lid}",
-                                 use_container_width=True):
-                        st.session_state[f"cu_edit_open_{lid}"] = True
-                with c4:
-                    if st.button("🗑 Delete", key=f"cu_del_{lid}",
-                                 use_container_width=True):
-                        st.session_state[f"cu_del_confirm_{lid}"] = True
+        # ── Wave navigator ────────────────────────────────────────────────────
+        from urllib.parse import quote as _q
+        _wave_data = json.dumps([
+            {"gid": int(row["lesson_id"]),
+             "name": str(row["lesson_name"]),
+             "phrases": int(row["phrases"])}
+            for _, row in lessons_df.iterrows()
+        ])
+        _wave_html = grammar_app._build_wave_html(
+            lesson_data_json=_wave_data,
+            default_gid=int(lessons_df.iloc[0]["lesson_id"]),
+            native=native, target=target,
+            user_id=user_id, resume_step=1,
+        )
+        components.html(_wave_html, height=265, scrolling=False)
+
+        # ── Manage lessons (edit / delete) ────────────────────────────────────
+        with st.expander("✏️ Manage lessons (rename / delete)", expanded=False):
+            for _, row in lessons_df.iterrows():
+                lid = int(row["lesson_id"])
+                with st.container():
+                    c1, c2, c3 = st.columns([5, 1.5, 1.5])
+                    with c1:
+                        st.markdown(
+                            f"**{row['lesson_name']}** "
+                            f"<span style='color:var(--mova-ink-3);font-size:.8rem'>· {row['phrases']} phrases</span>",
+                            unsafe_allow_html=True,
+                        )
+                    with c2:
+                        if st.button("✏ Rename", key=f"cu_edit_{lid}",
+                                     use_container_width=True):
+                            st.session_state[f"cu_edit_open_{lid}"] = True
+                    with c3:
+                        if st.button("🗑 Delete", key=f"cu_del_{lid}",
+                                     use_container_width=True):
+                            st.session_state[f"cu_del_confirm_{lid}"] = True
 
                 if st.session_state.get(f"cu_edit_open_{lid}"):
                     new_name = st.text_input(

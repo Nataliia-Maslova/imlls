@@ -170,3 +170,69 @@ def get_topic_for_lesson(db_path: str, global_lesson_id: int) -> tuple:
     if meta is None:
         return (None, None)
     return (meta["topic"], meta["local_lesson"])
+
+
+def get_vocab_nav_data(db_path: str) -> dict:
+    """
+    Return structured navigation data for the hierarchical vocab picker.
+
+    Returns:
+        {
+            sheet_name: [
+                {"gid": int, "local_lesson": int, "name": str},
+                ...
+            ]
+        }
+
+    `name` comes from the `lesson_name` column if it exists in the workbook,
+    otherwise falls back to "Lesson N".
+    The list is sorted by local_lesson (ascending).
+    """
+    sheets = _read_all_sheets(db_path)
+    gid_to_meta, meta_to_gid = _build_global_index(db_path)
+
+    result: dict = {}
+    for sheet_name, df in sheets.items():
+        df.columns = [str(c).lower().strip() for c in df.columns]
+        has_lesson = "lesson_id" in df.columns
+        has_name   = "lesson_name" in df.columns
+
+        if not has_lesson:
+            # Whole sheet = single lesson
+            gid = meta_to_gid.get((sheet_name, 1))
+            if gid:
+                result[sheet_name] = [
+                    {"gid": gid, "local_lesson": 1, "name": sheet_name}
+                ]
+            continue
+
+        # Collect first lesson_name per local lesson_id
+        lesson_names: dict = {}
+        for _, row in df.iterrows():
+            lid_raw = row.get("lesson_id")
+            if lid_raw is None or (isinstance(lid_raw, float) and lid_raw != lid_raw):
+                continue
+            lid = int(lid_raw)
+            if lid in lesson_names:
+                continue  # already have a name for this lesson
+            if has_name:
+                name_val = row.get("lesson_name")
+                if name_val and str(name_val).strip() not in ("", "nan"):
+                    lesson_names[lid] = str(name_val).strip()
+                    continue
+            lesson_names[lid] = f"Lesson {lid}"
+
+        lessons = []
+        for local_lid in sorted(lesson_names.keys()):
+            gid = meta_to_gid.get((sheet_name, local_lid))
+            if gid is None:
+                continue
+            lessons.append({
+                "gid":          gid,
+                "local_lesson": local_lid,
+                "name":         lesson_names[local_lid],
+            })
+        if lessons:
+            result[sheet_name] = lessons
+
+    return result
