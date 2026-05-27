@@ -1317,8 +1317,16 @@ def render_setup():
         except Exception as _e:
             st.error(f"Помилка: {_e}")
 
+    _LESSON_WORD = {
+        "English":   "Lesson",
+        "Ukrainian": "Урок",
+        "Spanish":   "Lección",
+        "Korean":    "수업",
+    }
+    _lesson_word = _LESSON_WORD.get(native_lang, "Lesson")
+
     default_lid = int(lessons[default_idx])
-    _r_lesson_names  = {int(l): f"Урок {l}" for l in lessons}
+    _r_lesson_names  = {int(l): f"{_lesson_word} {l}" for l in lessons}
     _r_lesson_counts = {int(l): int((df["lesson_id"] == l).sum()) for l in lessons}
     _r_int_lessons   = [int(l) for l in lessons]
 
@@ -1360,7 +1368,7 @@ def render_setup():
                 _count = _r_lesson_counts.get(_lid, 0)
                 _is_def = (_lid == default_lid)
                 _badge = f"↩{resume_step} " if (_is_def and resume_step > 1) else ""
-                _label = f"{_badge}{_emoji}\nУрок {_lid}"
+                _label = f"{_badge}{_emoji}\n{_lesson_word} {_lid}"
                 with _col:
                     if st.button(
                         _label,
@@ -1445,6 +1453,10 @@ def main():
 
     lang        = _r_lang()
     native_lang = st.session_state.get("launcher_native", "Ukrainian")
+    _lesson_word = {
+        "English": "Lesson", "Ukrainian": "Урок",
+        "Spanish": "Lección", "Korean": "수업",
+    }.get(native_lang, "Lesson")
     df          = load(str(DB_PATH), lang=lang, native_lang=native_lang)
 
     step = st.session_state["r_step"]
@@ -1478,7 +1490,7 @@ def main():
             f'text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">'
             f'Твій шлях · Reading</div>'
             f'<div style="color:var(--mova-ink);font-size:1.05rem;font-weight:600">'
-            f'Урок {lid} / {total}</div>'
+            f'{_lesson_word} {lid} / {total}</div>'
             f'<div style="display:flex;justify-content:space-between;'
             f'font-family:\'JetBrains Mono\',monospace;font-size:.72rem;'
             f'color:var(--mova-ink-3);margin:6px 0 2px">'
@@ -1545,13 +1557,13 @@ def main():
             "lesson_jump_sel_r",
             options=all_l,
             index=all_l.index(lid) if lid in all_l else 0,
-            format_func=lambda l: f"Урок {l}",
+            format_func=lambda l, lw=_lesson_word: f"{lw} {l}",
             key="sb_r_jump_lid",
             label_visibility="collapsed",
         )
         if _jump_lid != lid:
             if st.button(
-                f"Перейти до уроку {_jump_lid}",
+                f"→ {_lesson_word} {_jump_lid}",
                 use_container_width=True,
                 key="sb_r_go_lid",
             ):
@@ -1662,30 +1674,10 @@ def main():
 
         if _has_next:
             with _cols[1]:
-                if st.button(f"\u25b6 Урок {_next_lid}", use_container_width=True, type="primary"):
+                if st.button(f"\u25b6 {_lesson_word} {_next_lid}", use_container_width=True, type="primary"):
                     _next_rows = df[df["lesson_id"] == _next_lid].reset_index(drop=True)
                     clear_step_state()
                     st.session_state["r_lesson"] = _next_lid
                     st.session_state["r_rows"]   = _next_rows
                     st.session_state["r_step"]   = 1
                     st.session_state.pop("_r_progress_saved", None)
-                    st.session_state.pop("_r_last_saved_progress", None)
-                    st.session_state.pop("_r_gami_lesson_saved", None)
-                    st.session_state.pop("_cached_r_streak", None)
-                    st.rerun()
-
-        with _cols[-1]:
-            if st.button("⏭ Next", use_container_width=True):
-                pass
-
-    else:
-        # ── Render lesson step (1–5) ──────────────────────────────────────
-        fn = STEP_FNS.get(step)
-        if fn:
-            fn(rows)
-        else:
-            st.error(f"Невідомий крок: {step}")
-
-
-if __name__ == "__main__":
-    main()
