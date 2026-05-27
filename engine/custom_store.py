@@ -120,19 +120,25 @@ def _pull_from_sheets() -> pd.DataFrame | None:
 
 # ─── Public API ──────────────────────────────────────────────────────────
 
+_sheets_synced: bool = False   # pulled from Sheets at most once per process start
+
+
 def load_all(user_id: str | None = None, prefer_sheets: bool = True) -> pd.DataFrame:
     """Load every custom phrase for the user (or all users if user_id is None).
 
     When ``prefer_sheets`` is True and the sheet has more rows than the local
-    CSV, the local CSV is refreshed from Sheets first — this handles
-    Streamlit Cloud redeploys that wipe the local filesystem.
+    CSV, the local CSV is refreshed from Sheets — but only ONCE per process
+    start (not on every rerun) to avoid repeated slow API calls.
+    This handles Streamlit Cloud redeploys that wipe the local filesystem.
     """
+    global _sheets_synced
     local = _read_all()
-    if prefer_sheets:
+    if prefer_sheets and not _sheets_synced:
         remote = _pull_from_sheets()
         if remote is not None and len(remote) > len(local):
             _write_all(remote)
             local = remote
+        _sheets_synced = True
     if user_id:
         local = local[local["user_id"].astype(str) == str(user_id)]
     return local.reset_index(drop=True)

@@ -7,6 +7,7 @@ Session logger — writes every user interaction to:
 import csv
 from datetime import datetime
 from pathlib import Path
+import streamlit as st
 
 LOGS_DIR   = Path(__file__).parent.parent / "logs"
 LOGS_DIR.mkdir(exist_ok=True)
@@ -95,16 +96,37 @@ def _get_ws_progress():
 
 # ── Progress helpers ──────────────────────────────────────────────────────
 
+@st.cache_data(ttl=60, show_spinner=False)
+def _fetch_progress_records() -> list:
+    """Fetch all progress rows from Google Sheets.
+    Cached for 60 s — the 4 launcher cards share one API call instead of 4.
+    Cache is cleared automatically by _invalidate_progress_cache() on save.
+    """
+    try:
+        ws = _get_ws_progress()
+        if ws is None:
+            return []
+        return ws.get_all_records()
+    except Exception as e:
+        print(f"[Logger] _fetch_progress_records error: {e}")
+        return []
+
+
+def _invalidate_progress_cache():
+    """Clear only the progress records cache after a write so the next read is fresh."""
+    try:
+        _fetch_progress_records.clear()
+    except Exception:
+        pass
+
+
 def get_last_lesson(user_id: str, language_pair: str) -> int | None:
     """
     Returns the last completed lesson number for this user+language_pair,
     or None if no progress found.
     """
     try:
-        ws = _get_ws_progress()
-        if ws is None:
-            return None
-        records = ws.get_all_records()
+        records = _fetch_progress_records()
         for row in records:
             if (str(row.get("user_id")) == user_id and
                     str(row.get("language_pair")) == language_pair):
@@ -126,10 +148,7 @@ def get_progress(user_id: str, language_pair: str):
       99        -> lesson fully completed (sentinel)
     """
     try:
-        ws = _get_ws_progress()
-        if ws is None:
-            return None
-        records = ws.get_all_records()
+        records = _fetch_progress_records()
         for row in records:
             if (str(row.get("user_id")) == user_id and
                     str(row.get("language_pair")) == language_pair):
@@ -168,10 +187,12 @@ def save_progress(user_id: str, language_pair: str,
                     str(row.get("language_pair")) == language_pair):
                 # Update existing row
                 ws.update(f"A{i}:E{i}", [new_vals])
+                _invalidate_progress_cache()
                 return
 
         # No existing row — append
         ws.append_row(new_vals, value_input_option="RAW")
+        _invalidate_progress_cache()
 
     except Exception as e:
         print(f"[Logger] save_progress error: {e}")

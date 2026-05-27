@@ -3,6 +3,7 @@ Data loader — reads the Excel database and returns filtered DataFrames.
 """
 import pandas as pd
 from pathlib import Path
+import streamlit as st
 
 # Language column names in the Excel file
 LANG_COLUMNS = {
@@ -29,6 +30,7 @@ TTS_LANG = {
 }
 
 
+@st.cache_data(show_spinner=False)
 def load_phrases(db_path: str, native_lang: str, target_lang: str) -> pd.DataFrame:
     """
     Load phrases from Excel and return a DataFrame with columns:
