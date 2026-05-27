@@ -14,6 +14,7 @@ the whole workbook) so it slots into the existing 8-step LessonSession
 flow without changes.
 """
 import pandas as pd
+import streamlit as st
 
 # Same language code mapping as engine/loader.py
 LANG_COLUMNS = {
@@ -24,11 +25,14 @@ LANG_COLUMNS = {
 }
 
 
+@st.cache_data(show_spinner=False)
 def _read_all_sheets(db_path: str) -> dict:
-    """Return {sheet_name: DataFrame} for every sheet in the workbook."""
+    """Return {sheet_name: DataFrame} for every sheet in the workbook.
+    Cached so the file is read from disk only once per session."""
     return pd.read_excel(db_path, sheet_name=None, engine="openpyxl")
 
 
+@st.cache_data(show_spinner=False)
 def _build_global_index(db_path: str):
     """
     Walk the entire workbook and return:
@@ -37,6 +41,7 @@ def _build_global_index(db_path: str):
 
     Numbering is stable: assigned in workbook order (sheet order, then
     local lesson_id within the sheet).
+    Cached so the index is built only once per session.
     """
     sheets = _read_all_sheets(db_path)
     gid_to_meta = {}
@@ -45,13 +50,11 @@ def _build_global_index(db_path: str):
     for sheet_name, df in sheets.items():
         df.columns = [str(c).lower().strip() for c in df.columns]
         if "lesson_id" not in df.columns:
-            # Sheet without lesson_id column -> treat the whole sheet as one lesson
             gid += 1
             gid_to_meta[gid] = {"topic": sheet_name, "local_lesson": 1}
             meta_to_gid[(sheet_name, 1)] = gid
             continue
 
-        # Get unique lesson_ids in this sheet (skip NaN)
         lessons_in_sheet = sorted(
             int(x) for x in df["lesson_id"].dropna().unique()
         )
@@ -62,18 +65,17 @@ def _build_global_index(db_path: str):
     return gid_to_meta, meta_to_gid
 
 
+@st.cache_data(show_spinner=False)
 def load_vocab(db_path: str, native_lang: str, target_lang: str) -> pd.DataFrame:
     """
     Load vocabulary from Excel and return a DataFrame with columns:
       lesson_id, phrase_id, topic, local_lesson, native, target
 
-    `lesson_id` is the global lesson number (unique across the whole workbook),
-    so the same LessonSession plumbing as grammar can be reused.
+    `lesson_id` is the global lesson number (unique across the whole workbook).
     `local_lesson` is the lesson number inside the topic (1, 2, 3, ...).
 
-    Rows where either native or target column is empty are dropped, so
-    sheets that are not yet translated for the chosen language pair will
-    simply yield fewer (or zero) phrases.
+    Rows where either native or target column is empty are dropped.
+    Cached: the Excel file is not re-read on every Streamlit rerun.
     """
     if native_lang not in LANG_COLUMNS or target_lang not in LANG_COLUMNS:
         raise ValueError(
@@ -84,57 +86,73 @@ def load_vocab(db_path: str, native_lang: str, target_lang: str) -> pd.DataFrame
     native_col = LANG_COLUMNS[native_lang]
     target_col = LANG_COLUMNS[target_lang]
 
+    # Reuse cached reads — no double file I/O
     sheets = _read_all_sheets(db_path)
     _, meta_to_gid = _build_global_index(db_path)
 
-    out_rows = []
+    chunks = []
     for sheet_name, df in sheets.items():
+        df = df.copy()
         df.columns = [str(c).lower().strip() for c in df.columns]
 
         if native_col not in df.columns or target_col not in df.columns:
             continue
 
-        # Iterate row by row so we keep the explicit lesson_id and phrase_id
-        # If the columns are missing, fall back to an implicit numbering.
         has_lesson = "lesson_id" in df.columns
         has_phrase = "phrase_id" in df.columns
 
-        # Drop rows where either language is empty/NaN
-        sub = df.copy()
-        sub[native_col] = sub[native_col].astype(str).str.strip()
-        sub[target_col] = sub[target_col].astype(str).str.strip()
-        sub = sub[
-            (sub[native_col] != "") &
-            (sub[target_col] != "") &
-            (sub[native_col].str.lower() != "nan") &
-            (sub[target_col].str.lower() != "nan")
-        ]
+        # Vectorised string cleaning (no iterrows)
+        df[native_col] = df[native_col].astype(str).str.strip()
+        df[target_col] = df[target_col].astype(str).str.strip()
+        mask = (
+            (df[native_col] != "") & (df[native_col].str.lower() != "nan") &
+            (df[target_col] != "") & (df[target_col].str.lower() != "nan")
+        )
+        sub = df[mask].copy()
 
-        # Implicit fallback counters when columns are missing
-        implicit_phrase = 0
-        for _, r in sub.iterrows():
-            implicit_phrase += 1
-            local_lesson = int(r["lesson_id"]) if has_lesson and pd.notna(r.get("lesson_id")) else 1
-            phrase_id    = int(r["phrase_id"]) if has_phrase and pd.notna(r.get("phrase_id")) else implicit_phrase
-            gid = meta_to_gid.get((sheet_name, local_lesson))
-            if gid is None:
-                # local_lesson not found in the global index (shouldn't happen)
-                continue
-            out_rows.append({
-                "lesson_id":    gid,
-                "phrase_id":    phrase_id,
-                "topic":        sheet_name,
-                "local_lesson": local_lesson,
-                "native":       r[native_col],
-                "target":       r[target_col],
-            })
+        if sub.empty:
+            continue
 
-    if not out_rows:
+        # Local lesson column
+        if has_lesson:
+            sub["_local_lesson"] = sub["lesson_id"].fillna(1).astype(int)
+        else:
+            sub["_local_lesson"] = 1
+
+        # Phrase id column
+        if has_phrase:
+            sub["_phrase_id"] = (
+                sub["phrase_id"]
+                .where(sub["phrase_id"].notna(), other=range(1, len(sub) + 1))
+                .astype(int)
+            )
+        else:
+            sub["_phrase_id"] = range(1, len(sub) + 1)
+
+        # Map (sheet, local_lesson) → global lesson id
+        sub["_gid"] = sub["_local_lesson"].map(
+            lambda local, sn=sheet_name: meta_to_gid.get((sn, local))
+        )
+        sub = sub.dropna(subset=["_gid"])
+        if sub.empty:
+            continue
+
+        chunk = pd.DataFrame({
+            "lesson_id":    sub["_gid"].astype(int),
+            "phrase_id":    sub["_phrase_id"].values,
+            "topic":        sheet_name,
+            "local_lesson": sub["_local_lesson"].values,
+            "native":       sub[native_col].values,
+            "target":       sub[target_col].values,
+        })
+        chunks.append(chunk)
+
+    if not chunks:
         return pd.DataFrame(
             columns=["lesson_id", "phrase_id", "topic", "local_lesson", "native", "target"]
         )
 
-    result = pd.DataFrame(out_rows)
+    result = pd.concat(chunks, ignore_index=True)
     result = result.sort_values(["lesson_id", "phrase_id"]).reset_index(drop=True)
     return result
 
@@ -151,6 +169,7 @@ def get_available_vocab_lessons(df: pd.DataFrame) -> list:
     return sorted(int(x) for x in df["lesson_id"].unique())
 
 
+@st.cache_data(show_spinner=False)
 def get_lesson_topics(db_path: str) -> dict:
     """
     Return {global_lesson_id: "Topic - Lesson N"} for every (topic, local_lesson)
@@ -163,6 +182,7 @@ def get_lesson_topics(db_path: str) -> dict:
     }
 
 
+@st.cache_data(show_spinner=False)
 def get_topic_for_lesson(db_path: str, global_lesson_id: int) -> tuple:
     """Return (topic, local_lesson) for a global lesson id, or (None, None)."""
     gid_to_meta, _ = _build_global_index(db_path)
@@ -172,6 +192,7 @@ def get_topic_for_lesson(db_path: str, global_lesson_id: int) -> tuple:
     return (meta["topic"], meta["local_lesson"])
 
 
+@st.cache_data(show_spinner=False)
 def get_vocab_nav_data(db_path: str) -> dict:
     """
     Return structured navigation data for the hierarchical vocab picker.
@@ -188,17 +209,18 @@ def get_vocab_nav_data(db_path: str) -> dict:
     otherwise falls back to "Lesson N".
     The list is sorted by local_lesson (ascending).
     """
+    # Both calls hit the cache — no extra file reads
     sheets = _read_all_sheets(db_path)
     gid_to_meta, meta_to_gid = _build_global_index(db_path)
 
     result: dict = {}
     for sheet_name, df in sheets.items():
+        df = df.copy()
         df.columns = [str(c).lower().strip() for c in df.columns]
         has_lesson = "lesson_id" in df.columns
         has_name   = "lesson_name" in df.columns
 
         if not has_lesson:
-            # Whole sheet = single lesson
             gid = meta_to_gid.get((sheet_name, 1))
             if gid:
                 result[sheet_name] = [
@@ -206,21 +228,28 @@ def get_vocab_nav_data(db_path: str) -> dict:
                 ]
             continue
 
-        # Collect first lesson_name per local lesson_id
+        # Build lesson_id → name map vectorially
         lesson_names: dict = {}
-        for _, row in df.iterrows():
-            lid_raw = row.get("lesson_id")
-            if lid_raw is None or (isinstance(lid_raw, float) and lid_raw != lid_raw):
-                continue
-            lid = int(lid_raw)
-            if lid in lesson_names:
-                continue  # already have a name for this lesson
-            if has_name:
-                name_val = row.get("lesson_name")
-                if name_val and str(name_val).strip() not in ("", "nan"):
-                    lesson_names[lid] = str(name_val).strip()
-                    continue
-            lesson_names[lid] = f"Lesson {lid}"
+        if has_name:
+            # Take first non-empty lesson_name per lesson_id
+            name_df = (
+                df[["lesson_id", "lesson_name"]]
+                .dropna(subset=["lesson_id"])
+                .copy()
+            )
+            name_df["lesson_id"] = name_df["lesson_id"].astype(int)
+            name_df["lesson_name"] = name_df["lesson_name"].astype(str).str.strip()
+            name_df = name_df[name_df["lesson_name"].str.lower() != "nan"]
+            name_df = name_df[name_df["lesson_name"] != ""]
+            for lid, name in name_df.groupby("lesson_id")["lesson_name"].first().items():
+                lesson_names[int(lid)] = name
+
+        # Fill missing with "Lesson N"
+        all_lids = sorted(
+            int(x) for x in df["lesson_id"].dropna().unique()
+        )
+        for lid in all_lids:
+            lesson_names.setdefault(lid, f"Lesson {lid}")
 
         lessons = []
         for local_lid in sorted(lesson_names.keys()):
