@@ -1681,3 +1681,23 @@ def main():
                     st.session_state["r_rows"]   = _next_rows
                     st.session_state["r_step"]   = 1
                     st.session_state.pop("_r_progress_saved", None)
+                    st.session_state.pop("_r_last_saved_progress", None)
+                    st.session_state.pop("_r_gami_lesson_saved", None)
+                    st.session_state.pop("_cached_r_streak", None)
+                    st.rerun()
+
+        with _cols[-1]:
+            if st.button("\u23ed Next", use_container_width=True):
+                pass
+
+    else:
+        # \u2500\u2500 Render lesson step (1\u20135) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+        fn = STEP_FNS.get(step)
+        if fn:
+            fn(rows)
+        else:
+            st.error(f"\u041d\u0435\u0432\u0456\u0434\u043e\u043c\u0438\u0439 \u043a\u0440\u043e\u043a: {step}")
+
+
+if __name__ == "__main__":
+    main()
