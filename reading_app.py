@@ -1292,25 +1292,84 @@ def render_setup():
                 resume_step = max(1, min(5, saved_step))
                 resume_msg  = f"⏯ Повернешся до уроку {saved_lesson} на крок {resume_step}"
 
-    # ── Wave navigator ───────────────────────────────────────────────────────
-    from grammar import _build_wave_html as _bwh
-    _lesson_data = json.dumps([
-        {"gid": int(lid),
-         "name": f"Урок {lid}",
-         "phrases": int((df["lesson_id"] == lid).sum())}
-        for lid in lessons
-    ])
-    _wave_html = _bwh(
-        lesson_data_json=_lesson_data,
-        default_gid=int(lessons[default_idx]),
-        native="", target="",
-        user_id=user_id,
-        resume_step=resume_step,
-        extra_params={"r_lang": chosen_lang},
-    )
+    # ── Wave navigator ────────────────────────────────────────────────────────
     if resume_msg:
         st.info(resume_msg)
-    components.html(_wave_html, height=265, scrolling=False)
+
+    def _start_reading_lesson(lid):
+        try:
+            _df = load(str(DB_PATH), lang=chosen_lang,
+                       native_lang=st.session_state.get("launcher_native", "Ukrainian"))
+            _rows = _df[_df["lesson_id"] == lid].reset_index(drop=True)
+            if not _rows.empty:
+                st.session_state.update({
+                    "r_lang":   chosen_lang,
+                    "r_lesson": lid,
+                    "r_user":   user_id,
+                    "r_rows":   _rows,
+                    "r_step":   1,
+                })
+                st.session_state.pop("_r_progress_saved", None)
+                st.session_state.pop("_r_last_saved_progress", None)
+                st.rerun()
+            else:
+                st.warning(f"Урок {lid} не знайдено.")
+        except Exception as _e:
+            st.error(f"Помилка: {_e}")
+
+    default_lid = int(lessons[default_idx])
+    _r_lesson_names  = {int(l): f"Урок {l}" for l in lessons}
+    _r_lesson_counts = {int(l): int((df["lesson_id"] == l).sum()) for l in lessons}
+    _r_int_lessons   = [int(l) for l in lessons]
+
+    from grammar import _render_wave_plotly
+
+    # Plotly wave (Streamlit ≥ 1.33 + plotly installed), else native buttons
+    _r_clicked = _render_wave_plotly(
+        lessons=_r_int_lessons,
+        lesson_names=_r_lesson_names,
+        lesson_counts=_r_lesson_counts,
+        default_lid=default_lid,
+        resume_step=resume_step,
+        key_suffix=f"reading_{chosen_lang}",
+    )
+    if _r_clicked is not None:
+        _start_reading_lesson(_r_clicked)
+    else:
+        # Fallback: circular native Streamlit buttons
+        EMOJIS_R = ['📖','🌟','💡','🎯','🔤','🗣️','✏️','📝','🎓','💬','🔑','🏆']
+        st.markdown("""
+<style>
+[data-testid="stHorizontalBlock"] [data-testid="stButton"] button {
+    border-radius: 50% !important;
+    width: 76px !important; height: 76px !important;
+    min-width: 76px !important; padding: 3px !important;
+    font-size: 0.57rem !important; line-height: 1.22 !important;
+    white-space: pre-wrap !important; overflow: hidden !important;
+    text-align: center !important;
+}
+</style>""", unsafe_allow_html=True)
+        n_r = len(_r_int_lessons)
+        ROW_R = 10
+        for _rs in range(0, n_r, ROW_R):
+            _row = _r_int_lessons[_rs:_rs + ROW_R]
+            _cols = st.columns(len(_row))
+            for _ci, (_col, _lid) in enumerate(zip(_cols, _row)):
+                _gidx = _rs + _ci
+                _emoji = EMOJIS_R[_gidx % len(EMOJIS_R)]
+                _count = _r_lesson_counts.get(_lid, 0)
+                _is_def = (_lid == default_lid)
+                _badge = f"↩{resume_step} " if (_is_def and resume_step > 1) else ""
+                _label = f"{_badge}{_emoji}\nУрок {_lid}"
+                with _col:
+                    if st.button(
+                        _label,
+                        key=f"rv_{_lid}_{_gidx}",
+                        type="primary" if _is_def else "secondary",
+                        use_container_width=False,
+                        help=f"Урок {_lid} · {_count} слів",
+                    ):
+                        _start_reading_lesson(_lid)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1616,43 +1675,16 @@ def main():
                     st.rerun()
 
         with _cols[-1]:
-            if st.button("\U0001f4da Обрати урок", use_container_width=True):
-                clear_all()
-                st.rerun()
-        return
-
-    # ── Show pending gamification toasts ────────────────────────────────────
-    for _toast_msg in st.session_state.pop("_pending_r_toasts", []):
-        st.toast(_toast_msg, icon="🎉")
-
-    fn   = STEP_FNS.get(step)
-    done = fn(rows) if fn else True
-
-    if done:
-        if GAMI_OK:
-            try:
-                _rlang = {"English":"en","Ukrainian":"uk","Spanish":"es","Korean":"ko"}.get(st.session_state.get("launcher_native","English"),"en")
-                _sres = on_step_complete(cur_user, step, 0.0, _rlang)
-                _stoasts = []
-                if _sres.get("leveled_up"):
-                    _stoasts.append(f"⭐ Новий рівень {_sres['level_num']}: {_sres['level_name']}! +{_sres['xp_earned']} XP")
-                for _bid, _bem, _bname, _bdesc in _sres.get("new_badges", []):
-                    _stoasts.append(f"{_bem} Бейдж «{_bname}»: {_bdesc}!")
-                if not _sres.get("leveled_up") and not _sres.get("new_badges"):
-                    _stoasts.append(f"⭐ +{_sres['xp_earned']} XP")
-                st.session_state["_pending_r_toasts"] = _stoasts
-            except Exception:
+            if st.button("⏭ Next", use_container_width=True):
                 pass
-        clear_step_state()
-        st.session_state["r_step"] = step + 1
-        st.rerun()
-    elif step not in REQUIRED and step != 4:
-        # Step 4 has its own "Пропустити" button inside do_step4; don't duplicate it.
-        st.markdown("---")
-        if st.button(f"⏭ Пропустити крок {step}", key=f"skip_global_{step}"):
-            clear_step_state()
-            st.session_state["r_step"] = step + 1
-            st.rerun()
+
+    else:
+        # ── Render lesson step (1–5) ──────────────────────────────────────
+        fn = STEP_FNS.get(step)
+        if fn:
+            fn(rows)
+        else:
+            st.error(f"Невідомий крок: {step}")
 
 
 if __name__ == "__main__":

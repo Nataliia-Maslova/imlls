@@ -146,20 +146,59 @@ def render_setup():
         st.info("Поки що жодного уроку для цієї пари. Створіть перший нижче ↓")
     else:
         # ── Wave navigator ────────────────────────────────────────────────────
-        from urllib.parse import quote as _q
-        _wave_data = json.dumps([
-            {"gid": int(row["lesson_id"]),
-             "name": str(row["lesson_name"]),
-             "phrases": int(row["phrases"])}
-            for _, row in lessons_df.iterrows()
-        ])
-        _wave_html = grammar_app._build_wave_html(
-            lesson_data_json=_wave_data,
-            default_gid=int(lessons_df.iloc[0]["lesson_id"]),
-            native=native, target=target,
-            user_id=user_id, resume_step=1,
+        _cu_lp = f"{WHISPER_LANG.get(native,'?')}-{WHISPER_LANG.get(target,'?')}-custom"
+        _cu_lessons    = [int(row["lesson_id"])   for _, row in lessons_df.iterrows()]
+        _cu_names_dict = {int(row["lesson_id"]): str(row["lesson_name"])
+                          for _, row in lessons_df.iterrows()}
+        _cu_counts_dict= {int(row["lesson_id"]): int(row["phrases"])
+                          for _, row in lessons_df.iterrows()}
+
+        from grammar import _render_wave_plotly
+
+        _cu_clicked = _render_wave_plotly(
+            lessons=_cu_lessons,
+            lesson_names=_cu_names_dict,
+            lesson_counts=_cu_counts_dict,
+            default_lid=_cu_lessons[0] if _cu_lessons else None,
+            resume_step=1,
+            key_suffix=f"custom_{native}_{target}",
         )
-        components.html(_wave_html, height=265, scrolling=False)
+        if _cu_clicked is not None:
+            _start_lesson(user_id, _cu_clicked, native, target, _cu_lp)
+        else:
+            # Fallback: circular native Streamlit buttons
+            st.markdown("""
+<style>
+[data-testid="stHorizontalBlock"] [data-testid="stButton"] button {
+    border-radius: 50% !important;
+    width: 76px !important; height: 76px !important;
+    min-width: 76px !important; padding: 3px !important;
+    font-size: 0.57rem !important; line-height: 1.22 !important;
+    white-space: pre-wrap !important; overflow: hidden !important;
+    text-align: center !important;
+}
+</style>""", unsafe_allow_html=True)
+            _cu_emojis = ['📖','🌟','💡','🎯','🔤','🗣️','✏️','📝','🎓','💬','🔑','🏆']
+            _cu_n = len(_cu_lessons)
+            _cu_rows_per_row = 10
+            for _cu_rs in range(0, _cu_n, _cu_rows_per_row):
+                _cu_chunk_ids = _cu_lessons[_cu_rs:_cu_rs + _cu_rows_per_row]
+                _cu_cols = st.columns(len(_cu_chunk_ids))
+                for _cu_ci, (_cu_col, _cu_lid) in enumerate(zip(_cu_cols, _cu_chunk_ids)):
+                    _cu_name  = _cu_names_dict.get(_cu_lid, f"Lesson {_cu_lid}")
+                    _cu_cnt   = _cu_counts_dict.get(_cu_lid, 0)
+                    _cu_gidx  = _cu_rs + _cu_ci
+                    _cu_emoji = _cu_emojis[_cu_gidx % len(_cu_emojis)]
+                    _cu_short = (_cu_name[:10] + "…") if len(_cu_name) > 10 else _cu_name
+                    with _cu_col:
+                        if st.button(
+                            f"{_cu_emoji}\n{_cu_short}",
+                            key=f"cu_wv_{_cu_lid}_{_cu_gidx}",
+                            type="secondary",
+                            use_container_width=False,
+                            help=f"{_cu_name} · {_cu_cnt} phrases",
+                        ):
+                            _start_lesson(user_id, _cu_lid, native, target, _cu_lp)
 
         # ── Manage lessons (edit / delete) ────────────────────────────────────
         with st.expander("✏️ Manage lessons (rename / delete)", expanded=False):
@@ -292,10 +331,9 @@ def _start_lesson(user_id: str, lesson_id: int,
                    native: str, target: str, lang_pair: str):
     lesson_df = get_lesson_phrases(user_id, lesson_id)
     if lesson_df.empty:
-        st.error("У цьому уроці немає фраз.")
+        st.error("No phrases in this lesson.")
         return
 
-    # Reset any previous lesson state
     for k in list(st.session_state):
         if k.startswith(("s1_", "s2_", "s3_", "s4_", "s5_", "s6_", "s7_", "s8_",
                           "mic_", "up_")):
@@ -303,6 +341,8 @@ def _start_lesson(user_id: str, lesson_id: int,
     st.session_state.pop("_progress_saved", None)
     st.session_state.pop("_last_saved_progress", None)
 
+    from engine.loader import TTS_LANG, WHISPER_LANG
+    from engine.session import LessonSession
     st.session_state.update({
         "practice_module": "custom",
         "session":         LessonSession(user_id, lesson_df, lesson_id,
@@ -316,24 +356,12 @@ def _start_lesson(user_id: str, lesson_id: int,
     st.rerun()
 
 
-# ─── Entry point ──────────────────────────────────────────────────────────
-
 def main():
-    """Custom practice entry point.
-
-    If a lesson has been started (``lesson_step`` in session state), defer
-    to grammar.main() which already implements the 8-step flow. Otherwise
-    show our setup / management screen.
-    """
-    if "lesson_step" in st.session_state and "session" in st.session_state:
-        # Re-use grammar's main() — it reads practice_module and renders
-        # the steps + sidebar nav.
-        grammar_app.main(module="custom")
-        return
-
-    # No active lesson — show our setup screen
     st.session_state["practice_module"] = "custom"
-    render_setup()
+    # Delegate to grammar_app which handles the full flow:
+    #   - no lesson_step → calls custom_app.render_setup() (lesson picker)
+    #   - lesson_step set → renders the 8-step lesson with sidebar navigation
+    grammar_app.main(module="custom")
 
 
 if __name__ == "__main__":

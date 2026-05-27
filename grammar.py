@@ -1232,109 +1232,351 @@ _TOPIC_META = {
 
 
 def _build_wave_html(lesson_data_json, default_gid, native, target, user_id, resume_step, extra_params=None):
-    """Generate the self-contained HTML for the horizontal wave lesson picker."""
+    """
+    Returns a full HTML document for use with components.html().
+    Navigation uses <a target="_top"> which reliably escapes the iframe sandbox.
+    """
     from urllib.parse import quote as _q
-    n_enc = _q(native)
-    t_enc = _q(target)
-    u_enc = _q(user_id or "student1")
     import json as _json
-    _ep = extra_params or {}
-    extra_params_js = _json.dumps(_ep)
-    return f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8">
+    n_enc = _q(native  or "")
+    t_enc = _q(target  or "")
+    u_enc = _q(user_id or "student1")
+    ep_js = _json.dumps(extra_params or {})
+
+    return f"""<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:transparent;overflow-x:hidden}}
-.wo{{width:100%;overflow-x:auto;overflow-y:visible;padding:4px 0 8px;scrollbar-width:thin;scrollbar-color:#ccc transparent}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:transparent;overflow-x:hidden}}
+.wo{{width:100%;overflow-x:auto;overflow-y:visible;padding:4px 0 8px;
+    scrollbar-width:thin;scrollbar-color:#ccc transparent}}
 .wo::-webkit-scrollbar{{height:4px}}
 .wo::-webkit-scrollbar-thumb{{background:#ccc;border-radius:2px}}
-.wi{{position:relative;height:190px}}
+.wi{{position:relative;height:180px}}
 .wsvg{{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}}
-.ln{{position:absolute;transform:translateX(-50%);cursor:pointer;text-align:center;width:88px;transition:transform .15s;user-select:none}}
+.ln{{position:absolute;transform:translateX(-50%);cursor:pointer;text-align:center;
+    width:88px;transition:transform .15s;user-select:none}}
 .ln:hover{{transform:translateX(-50%) scale(1.1)}}
 .ln.act{{transform:translateX(-50%) scale(1.06)}}
-.nc{{width:66px;height:66px;border-radius:50%;margin:0 auto 5px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;border:3px solid transparent;transition:border-color .15s;position:relative}}
+.nc{{width:64px;height:64px;border-radius:50%;margin:0 auto 5px;display:flex;
+    align-items:center;justify-content:center;font-size:1.4rem;
+    border:3px solid transparent;transition:border-color .15s;position:relative}}
 .ln.act .nc{{border-color:#7F77DD;box-shadow:0 0 0 4px rgba(127,119,221,.18)}}
 .nl{{font-size:11px;line-height:1.3;color:#777;max-width:86px;margin:0 auto}}
 .ln.act .nl{{color:#534AB7;font-weight:600}}
-.nb{{position:absolute;top:-5px;right:-5px;width:20px;height:20px;background:#534AB7;color:#fff;border-radius:50%;font-size:9px;font-weight:700;display:none;align-items:center;justify-content:center;border:2px solid #fff}}
+.nb{{position:absolute;top:-5px;right:-5px;width:20px;height:20px;background:#534AB7;
+    color:#fff;border-radius:50%;font-size:9px;font-weight:700;display:none;
+    align-items:center;justify-content:center;border:2px solid #fff}}
 .ln.act .nb{{display:flex}}
-.sb{{display:block;width:200px;margin:6px auto 0;padding:9px 0;background:#7F77DD;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}}
-.sb:hover{{background:#534AB7}}
+.sb{{display:block;width:200px;margin:6px auto 0;padding:9px 0;background:#7F77DD;
+    color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;
+    cursor:pointer;transition:background .15s;text-align:center;text-decoration:none}}
+.sb:hover{{background:#534AB7;color:#fff}}
 .it{{text-align:center;font-size:11px;color:#999;margin-top:3px}}
 </style></head><body>
-<div class="wo" id="wo"><div class="wi" id="wi"><svg class="wsvg" id="ws"></svg></div></div>
-<button class="sb" id="sb" onclick="go()">&#9654; Start Lesson</button>
+<div class="wo" id="wo"><div class="wi" id="wi">
+  <svg class="wsvg" id="ws"></svg>
+</div></div>
+<a class="sb" id="sb" href="#" target="_top">&#9654; Start Lesson</a>
 <p class="it" id="it"></p>
 <script>
-const LS={lesson_data_json};
-const DG={default_gid};
-const RS={resume_step};
-const NE="{n_enc}",TE="{t_enc}",UE="{u_enc}";
-const CL=['#CECBF6','#9FE1CB','#F5C4B3','#B5D4F4','#C0DD97','#FAC775','#F4C0D1','#D3D1C7'];
-const EM=['📖','🌟','💡','🎯','🔤','🗣️','✏️','📝','🎓','💬','🔑','🏆'];
-let sg=DG;
+var LS={lesson_data_json};
+var DG={default_gid};
+var RS={resume_step};
+var NE="{n_enc}",TE="{t_enc}",UE="{u_enc}";
+var EP={ep_js};
+var CL=['#CECBF6','#9FE1CB','#F5C4B3','#B5D4F4','#C0DD97','#FAC775','#F4C0D1','#D3D1C7'];
+var EM=['📖','🌟','💡','🎯','🔤','🗣️','✏️','📝','🎓','💬','🔑','🏆'];
+var sg=DG;
+
+function getURL(){{
+  var u='?vnav_lesson='+sg+'&vnav_native='+NE+'&vnav_target='+TE+'&vnav_user='+UE;
+  for(var k in EP)u+='&'+k+'='+encodeURIComponent(EP[k]);
+  return u;
+}}
+
 function build(){{
-  const n=LS.length;if(!n)return;
-  const cw=104,pad=56,W=Math.max(680,n*cw+pad*2);
-  const wi=document.getElementById('wi');wi.style.minWidth=W+'px';
-  const svg=document.getElementById('ws'),H=190,my=H/2,amp=52;
+  var n=LS.length; if(!n)return;
+  var cw=104,pad=56,W=Math.max(700,n*cw+pad*2);
+  var wi=document.getElementById('wi');
+  wi.style.minWidth=W+'px';
+  var svg=document.getElementById('ws'),H=180,my=H/2,amp=50;
   svg.setAttribute('viewBox','0 0 '+W+' '+H);
-  const pts=[];
-  for(let i=0;i<n;i++){{
-    const x=pad+i*(W-pad*2)/Math.max(n-1,1);
-    const y=my-Math.sin(i*Math.PI/2.8)*amp;
-    pts.push({{x,y}});
+  var pts=[];
+  for(var i=0;i<n;i++){{
+    var x=pad+i*(W-pad*2)/Math.max(n-1,1);
+    var y=my-Math.sin(i*Math.PI/2.8)*amp;
+    pts.push({{x:x,y:y}});
   }}
-  let d='M '+pts[0].x+' '+pts[0].y;
-  for(let i=1;i<pts.length;i++){{
-    const mx=(pts[i-1].x+pts[i].x)/2;
+  var d='M '+pts[0].x+' '+pts[0].y;
+  for(var i=1;i<pts.length;i++){{
+    var mx=(pts[i-1].x+pts[i].x)/2;
     d+=' C '+mx+' '+pts[i-1].y+' '+mx+' '+pts[i].y+' '+pts[i].x+' '+pts[i].y;
   }}
   svg.innerHTML='<path d="'+d+'" fill="none" stroke="#D3D1C7" stroke-width="4" stroke-linecap="round"/>';
-  wi.querySelectorAll('.ln').forEach(e=>e.remove());
-  pts.forEach((p,i)=>{{
-    const l=LS[i];
-    const div=document.createElement('div');
-    div.className='ln'+(l.gid===sg?' act':'');
-    div.style.left=p.x+'px';div.style.top=(p.y-44)+'px';
-    div.innerHTML='<div class="nc" style="background:'+CL[i%CL.length]+'">'+EM[i%EM.length]+'<div class="nb">'+(i+1)+'</div></div><div class="nl">'+l.name+'</div>';
-    div.onclick=()=>sel(l.gid);
-    wi.appendChild(div);
-  }});
+  var wi2=document.getElementById('wi');
+  var old=wi2.querySelectorAll('.ln');
+  for(var j=0;j<old.length;j++)old[j].remove();
+  for(var i=0;i<pts.length;i++){{
+    (function(i){{
+      var l=LS[i],p=pts[i];
+      var div=document.createElement('div');
+      div.className='ln'+(l.gid===sg?' act':'');
+      div.style.left=p.x+'px';
+      div.style.top=(p.y-43)+'px';
+      div.innerHTML='<div class="nc" style="background:'+CL[i%CL.length]+'">'+
+        EM[i%EM.length]+'<div class="nb">'+(i+1)+'</div></div>'+
+        '<div class="nl">'+l.name+'</div>';
+      div.onclick=function(){{sel(l.gid);}};
+      wi2.appendChild(div);
+    }})(i);
+  }}
   upd();
-  const ai=LS.findIndex(l=>l.gid===sg);
-  if(ai>2){{const wo=document.getElementById('wo');setTimeout(()=>{{wo.scrollLeft=pts[ai].x-wo.offsetWidth/2}},80);}}
+  var ai=LS.findIndex(function(l){{return l.gid===sg;}});
+  if(ai>2){{
+    var wo=document.getElementById('wo');
+    setTimeout(function(){{wo.scrollLeft=pts[ai].x-wo.offsetWidth/2;}},80);
+  }}
 }}
+
 function sel(gid){{
   sg=gid;
-  document.querySelectorAll('.ln').forEach((el,i)=>{{el.className='ln'+(LS[i].gid===gid?' act':'');}});
+  var wi=document.getElementById('wi');
+  var nodes=wi.querySelectorAll('.ln');
+  for(var i=0;i<nodes.length;i++)
+    nodes[i].className='ln'+(LS[i].gid===gid?' act':'');
   upd();
 }}
+
 function upd(){{
-  const l=LS.find(x=>x.gid===sg)||LS[0];if(!l)return;
-  const isR=(l.gid===DG&&RS>1);
-  document.getElementById('sb').textContent=isR?'▶ Resume at Step '+RS:'▶ Start Lesson';
+  var l=null;
+  for(var i=0;i<LS.length;i++)if(LS[i].gid===sg){{l=LS[i];break;}}
+  if(!l)l=LS[0]; if(!l)return;
+  var isR=(l.gid===DG&&RS>1);
+  var sb=document.getElementById('sb');
+  sb.textContent=isR?'▶ Resume at Step '+RS:'▶ Start Lesson';
+  sb.href=getURL();
   document.getElementById('it').textContent=l.name+' · '+l.phrases+' phrases';
 }}
-const EP={extra_params_js};
-function go(){{
-  if(!sg)return;
-  let u='?vnav_lesson='+sg+'&vnav_native='+NE+'&vnav_target='+TE+'&vnav_user='+UE;
-  for(const[k,v]of Object.entries(EP))u+='&'+k+'='+encodeURIComponent(v);
-  window.parent.location.href=u;
-}}
+
 build();
 </script></body></html>"""
 
+
+def _start_grammar_lesson(lid, cfg, native, target, user_id, lang_pair):
+    """Start a grammar/vocab lesson directly — no URL navigation required."""
+    try:
+        df = cfg["load"](str(cfg["db_path"]), native, target)
+        lesson_df = cfg["get_lesson"](df, lid)
+        if not lesson_df.empty:
+            st.session_state.update({
+                "session":     LessonSession(user_id, lesson_df, lid,
+                                              native, target,
+                                              language_pair=lang_pair),
+                "lesson_step": 1,
+                "tts_lang":    TTS_LANG.get(target, "en"),
+                "wh_lang":     WHISPER_LANG.get(target),
+                "lang_pair":   lang_pair,
+            })
+            st.rerun()
+        else:
+            st.warning(f"No data for lesson {lid} ({native} → {target}).")
+    except Exception as _e:
+        st.error(f"Error starting lesson {lid}: {_e}")
+
+
+def _render_wave_plotly(
+    lessons, lesson_names, lesson_counts,
+    default_lid, resume_step, key_suffix="wave",
+):
+    """
+    Snake-path lesson picker using Plotly interactive scatter chart.
+    Lessons are arranged in a zigzag/snake pattern (like Duolingo):
+      row 0 → left to right, row 1 → right to left, etc.
+    Each row holds COLS lessons and forms a sine arc.
+    Returns the lesson ID that was clicked, or None.
+    Requires plotly + Streamlit >= 1.33 (on_select support).
+    """
+    import math, inspect
+    try:
+        import plotly.graph_objects as go
+    except ImportError:
+        return None
+
+    if 'on_select' not in inspect.signature(st.plotly_chart).parameters:
+        return None
+
+    n = len(lessons)
+    if n == 0:
+        return None
+
+    COLORS = ['#CECBF6','#9FE1CB','#F5C4B3','#B5D4F4','#C0DD97','#FAC775','#F4C0D1','#D3D1C7']
+    COLS  = 7     # lessons per row
+    ROW_H = 120   # vertical distance between row baselines (data units)
+    AMP   = 40    # sine arc amplitude
+
+    # ── Compute (x, y) position for each lesson ──────────────────────────────
+    xs, ys = [], []
+    for i in range(n):
+        row      = i // COLS
+        col      = i % COLS
+        n_in_row = min(COLS, n - row * COLS)
+        t        = col / max(n_in_row - 1, 1)   # 0 → 1 across this row
+
+        x = col if row % 2 == 0 else (COLS - 1 - col)
+        y = -row * ROW_H + math.sin(t * math.pi) * AMP
+        xs.append(x)
+        ys.append(y)
+
+    n_rows  = math.ceil(n / COLS)
+    chart_h = max(280, n_rows * (ROW_H + 15) + 90)
+    y_min   = -(n_rows - 1) * ROW_H - AMP - 80
+    y_max   = AMP + 65
+
+    names  = [lesson_names.get(lid, f"Lesson {lid}") for lid in lessons]
+    counts = [lesson_counts.get(lid, 0) for lid in lessons]
+    shorts = [(nm[:12] + "…") if len(nm) > 12 else nm for nm in names]
+
+    m_colors = [COLORS[i % len(COLORS)] for i in range(n)]
+    b_colors = ['#5865F2' if lid == default_lid else '#ffffff' for lid in lessons]
+    b_widths = [4 if lid == default_lid else 2 for lid in lessons]
+    m_sizes  = [52 if lid == default_lid else 42 for lid in lessons]
+
+    hover = [
+        f"<b>{nm}</b><br>{cnt} phrases"
+        + (f"<br>↩ resume step {resume_step}" if lid == default_lid and resume_step > 1 else "")
+        for nm, cnt, lid in zip(names, counts, lessons)
+    ]
+
+    fig = go.Figure()
+
+    # ── Snake path (connects all lesson positions in order) ──────────────────
+    fig.add_trace(go.Scatter(
+        x=xs, y=ys, mode='lines',
+        line=dict(color='#D0D0D0', width=6),
+        hoverinfo='skip', showlegend=False,
+    ))
+
+    # ── Lesson circles ───────────────────────────────────────────────────────
+    fig.add_trace(go.Scatter(
+        x=xs, y=ys,
+        mode='markers+text',
+        marker=dict(
+            size=m_sizes, color=m_colors,
+            line=dict(color=b_colors, width=b_widths),
+            symbol='circle',
+        ),
+        text=shorts,
+        textposition='bottom center',
+        textfont=dict(size=9, color='#444', family='Inter, sans-serif'),
+        hovertext=hover,
+        hoverinfo='text',
+        showlegend=False,
+    ))
+
+    # ── Resume badge ─────────────────────────────────────────────────────────
+    if resume_step > 1 and default_lid in lessons:
+        di = lessons.index(default_lid)
+        fig.add_annotation(
+            x=xs[di] + 0.15, y=ys[di] + 22,
+            text=f"↩{resume_step}",
+            showarrow=False,
+            font=dict(size=9, color='white'),
+            bgcolor='#5865F2', bordercolor='#5865F2',
+            borderwidth=1, borderpad=3,
+        )
+
+    fig.update_layout(
+        height=chart_h,
+        margin=dict(l=20, r=20, t=10, b=55),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        xaxis=dict(visible=False, range=[-0.8, COLS - 0.2], fixedrange=True),
+        yaxis=dict(visible=False, range=[y_min, y_max],     fixedrange=True),
+        dragmode=False,
+        clickmode='event+select',
+    )
+
+    event = st.plotly_chart(
+        fig,
+        use_container_width=True,
+        on_select='rerun',
+        key=f"wplot_{key_suffix}",
+        config=dict(displayModeBar=False),
+    )
+
+    # ── Handle click ─────────────────────────────────────────────────────────
+    if not event:
+        return None
+    try:
+        pts = getattr(event.selection, 'points', None) or event.selection.get('points', [])
+    except Exception:
+        return None
+
+    for pt in pts:
+        if pt.get('curve_number', -1) == 1:          # circles trace
+            idx = pt.get('point_number', pt.get('point_index', -1))
+            if 0 <= idx < n:
+                return lessons[idx]
+    return None
+
+
+def _render_wave_native(
+    lessons, lesson_names, lesson_counts,
+    default_lid, resume_step,
+    cfg, native, target, user_id, lang_pair,
+):
+    """Wave-style lesson picker using native Streamlit buttons.
+    Clicking a circle immediately starts that lesson — no iframe needed."""
+    import math
+
+    n = len(lessons)
+    if n == 0:
+        return
+
+    EMOJIS = ['📖','🌟','💡','🎯','🔤','🗣️','✏️','📝','🎓','💬','🔑','🏆']
+
+    st.markdown("""
+<style>
+[data-testid="stHorizontalBlock"] [data-testid="stButton"] button {
+    border-radius: 50% !important;
+    width: 76px !important; height: 76px !important;
+    min-width: 76px !important; padding: 3px !important;
+    font-size: 0.57rem !important; line-height: 1.22 !important;
+    white-space: pre-wrap !important; overflow: hidden !important;
+    text-align: center !important;
+}
+</style>""", unsafe_allow_html=True)
+
+    ROW = 10
+    for row_start in range(0, n, ROW):
+        row_lids = lessons[row_start:row_start + ROW]
+        cols = st.columns(len(row_lids))
+        for ci, (col, lid) in enumerate(zip(cols, row_lids)):
+            gidx  = row_start + ci
+            emoji = EMOJIS[gidx % len(EMOJIS)]
+            name  = lesson_names.get(lid, f"{cfg.get('lesson_word','Lesson')} {lid}")
+            short = (name[:10] + "…") if len(name) > 10 else name
+            is_def = (lid == default_lid)
+            badge  = f"↩{resume_step} " if (is_def and resume_step > 1) else ""
+            label  = f"{badge}{emoji}\n{short}"
+            count  = lesson_counts.get(lid, 0)
+            with col:
+                if st.button(
+                    label,
+                    key=f"wv_{lid}_{gidx}",
+                    type="primary" if is_def else "secondary",
+                    use_container_width=False,
+                    help=f"{name} · {count} phrases",
+                ):
+                    _start_grammar_lesson(lid, cfg, native, target, user_id, lang_pair)
 
 def _render_flat_wave_nav(
     df, cfg, lang_pair, native, target, user_id,
     lessons, default_idx, resume_step, resume_msg, progress,
     counts_by_lid, topics_map,
 ):
-    """Flat wave lesson picker — all lessons on one scrollable wave."""
-
+    """Flat wave lesson picker — native Streamlit buttons, no iframe."""
     if resume_msg:
         st.info(resume_msg)
 
@@ -1345,21 +1587,32 @@ def _render_flat_wave_nav(
             return topics_map[lid]
         return f"{cfg['lesson_word']} {lid}"
 
-    lesson_data_json = json.dumps([
-        {"gid": lid, "name": _lesson_name(lid),
-         "phrases": counts_by_lid.get(lid, 0)}
-        for lid in lessons
-    ])
+    lesson_names = {lid: _lesson_name(lid) for lid in lessons}
 
-    wave_html = _build_wave_html(
-        lesson_data_json=lesson_data_json,
-        default_gid=default_gid,
-        native=native,
-        target=target,
-        user_id=user_id,
+    _key = f"{lang_pair}_{cfg.get('lang_suffix', 'g')}"
+    clicked = _render_wave_plotly(
+        lessons=lessons,
+        lesson_names=lesson_names,
+        lesson_counts=counts_by_lid,
+        default_lid=default_gid,
         resume_step=resume_step,
+        key_suffix=_key,
     )
-    components.html(wave_html, height=265, scrolling=False)
+    if clicked is not None:
+        _start_grammar_lesson(clicked, cfg, native, target, user_id, lang_pair)
+    else:
+        _render_wave_native(
+            lessons=lessons,
+            lesson_names=lesson_names,
+            lesson_counts=counts_by_lid,
+            default_lid=default_gid,
+            resume_step=resume_step,
+            cfg=cfg,
+            native=native,
+            target=target,
+            user_id=user_id,
+            lang_pair=lang_pair,
+        )
 
 def _render_vocab_nav(
     df, cfg, db_path, lang_pair, native, target, user_id,
@@ -1429,22 +1682,33 @@ def _render_vocab_nav(
     if default_gid not in {l["gid"] for l in radio_opts}:
         default_gid = radio_opts[0]["gid"]
 
-    lesson_data_json = json.dumps([
-        {"gid": l["gid"], "name": l["name"],
-         "phrases": counts_by_lid.get(l["gid"], 0)}
-        for l in radio_opts
-    ])
+    lesson_names_dict = {l["gid"]: l["name"] for l in radio_opts}
+    _vocab_lessons = [l["gid"] for l in radio_opts]
 
-    wave_html = _build_wave_html(
-        lesson_data_json=lesson_data_json,
-        default_gid=default_gid,
-        native=native,
-        target=target,
-        user_id=user_id,
+    _vkey = f"{lang_pair}_v"
+    _vclicked = _render_wave_plotly(
+        lessons=_vocab_lessons,
+        lesson_names=lesson_names_dict,
+        lesson_counts=counts_by_lid,
+        default_lid=default_gid,
         resume_step=resume_step,
+        key_suffix=_vkey,
     )
-
-    components.html(wave_html, height=265, scrolling=False)
+    if _vclicked is not None:
+        _start_grammar_lesson(_vclicked, cfg, native, target, user_id, lang_pair)
+    else:
+        _render_wave_native(
+            lessons=_vocab_lessons,
+            lesson_names=lesson_names_dict,
+            lesson_counts=counts_by_lid,
+            default_lid=default_gid,
+            resume_step=resume_step,
+            cfg=cfg,
+            native=native,
+            target=target,
+            user_id=user_id,
+            lang_pair=lang_pair,
+        )
 
 
 
@@ -2265,9 +2529,14 @@ def main(module: str = "grammar"):
                     _toasts.append(f"{_bem} Бейдж «{_bname}»: {_bdesc}!")
                 if not _gres.get("leveled_up") and not _gres.get("new_badges"):
                     _toasts.append(f"⭐ +{_gres['xp_earned']} XP")
-                st.session_state["_pending_toasts"] = _toasts
+                st.session_state["_pending_toasts"] = (
+                    st.session_state.get("_pending_toasts", []) + _toasts
+                )
             except Exception:
                 pass
-            _clear_lesson()
-            # ── Adaptive navigation: advance to next step in sequence ─────
-       
+            st.session_state["lesson_step"] = step + 1
+            st.rerun()
+
+
+if __name__ == "__main__":
+    main()
