@@ -165,10 +165,11 @@ def _count_grammar_lessons(native: str, target: str) -> int:
 
 @st.cache_data(show_spinner=False)
 def _count_vocab_lessons(native: str, target: str) -> int:
-    """Total vocabulary lessons available for the chosen language pair."""
+    """Total vocabulary lessons available (index only — no phrase text loaded)."""
     try:
-        df = load_vocab(str(DB_VOCAB), native, target)
-        return len(get_available_vocab_lessons(df))
+        from engine.vocab_loader import get_vocab_nav_data
+        nav_data = get_vocab_nav_data(str(DB_VOCAB))
+        return sum(len(ls) for ls in nav_data.values())
     except Exception:
         return 0
 

@@ -1366,7 +1366,14 @@ build();
 def _start_grammar_lesson(lid, cfg, native, target, user_id, lang_pair):
     """Start a grammar/vocab lesson directly — no URL navigation required."""
     try:
-        df = cfg["load"](str(cfg["db_path"]), native, target)
+        # Vocab: resolve topic so we lazy-load only that one sheet
+        extra = {}
+        if cfg.get("lang_suffix") == "vocab":
+            from engine.vocab_loader import get_topic_for_lesson
+            _topic, _ = get_topic_for_lesson(str(cfg["db_path"]), lid)
+            if _topic:
+                extra["topic"] = _topic
+        df = cfg["load"](str(cfg["db_path"]), native, target, **extra)
         lesson_df = cfg["get_lesson"](df, lid)
         if not lesson_df.empty:
             st.session_state.update({
@@ -1746,7 +1753,15 @@ def render_setup():
                 if _qp_target not in LANGUAGES or _qp_target == _qp_native:
                     _qp_target = next(l for l in LANGUAGES if l != _qp_native)
                 st.query_params.clear()
-                _qp_df        = cfg["load"](str(db_path), _qp_native, _qp_target)
+                # Vocab: lazy-load only the sheet that contains this lesson
+                _qp_extra = {}
+                if cfg.get("lang_suffix") == "vocab":
+                    from engine.vocab_loader import get_topic_for_lesson
+                    _qp_topic, _ = get_topic_for_lesson(str(db_path), _qp_lid)
+                    if _qp_topic:
+                        _qp_extra["topic"] = _qp_topic
+                _qp_df        = cfg["load"](str(db_path), _qp_native, _qp_target,
+                                            **_qp_extra)
                 _qp_lesson_df = cfg["get_lesson"](_qp_df, _qp_lid)
                 if not _qp_lesson_df.empty:
                     _qp_lp = (f"{WHISPER_LANG.get(_qp_native,'?')}"
@@ -1783,12 +1798,24 @@ def render_setup():
         target = st.selectbox("🎯 Target language", target_options,
                               index=target_idx)
 
-    try:
-        df = cfg["load"](str(db_path), native, target)
-    except Exception as e:
-        st.error(f"Error: {e}"); st.stop()
+    # ── Load lessons ──────────────────────────────────────────────────────────
+    # Vocab: lazy path — build lesson list from the lightweight index only.
+    # No phrase text is read here; sheets are loaded on demand when the user
+    # starts a lesson (_start_grammar_lesson passes topic= kwarg).
+    if module == "vocab":
+        from engine.vocab_loader import get_vocab_nav_data as _gnvd
+        _nav_data = _gnvd(str(db_path))
+        lessons       = sorted(l["gid"] for ls in _nav_data.values() for l in ls)
+        df            = None  # not needed for vocab navigation
+        counts_by_lid = {}    # phrase counts unknown until a sheet is loaded
+    else:
+        try:
+            df = cfg["load"](str(db_path), native, target)
+        except Exception as e:
+            st.error(f"Error: {e}"); st.stop()
+        lessons       = cfg["get_lessons"](df)
+        counts_by_lid = df.groupby("lesson_id").size().to_dict() if not df.empty else {}
 
-    lessons   = cfg["get_lessons"](df)
     # Suffix language_pair with module so grammar/vocab progress are tracked separately
     lang_pair = f"{WHISPER_LANG.get(native,'?')}-{WHISPER_LANG.get(target,'?')}-{cfg['lang_suffix']}"
     default_user = st.session_state.get("launcher_user", "student1")
@@ -1832,13 +1859,10 @@ def render_setup():
         # Grammar: optional topic_en / topic_uk columns in the workbook
         topics_map = get_grammar_topics(df, native_lang=native)
     elif cfg["topics"]:
-        # Vocab: topic loader that takes the db path
+        # Vocab: topic loader that takes the db path (index-only, fast)
         topics_map = cfg["topics"](str(db_path))
     else:
         topics_map = None
-
-    # Pre-compute phrase counts (used by grammar selectbox and vocab nav)
-    counts_by_lid = df.groupby("lesson_id").size().to_dict() if not df.empty else {}
 
     # ── Vocabulary: hierarchical navigator ───────────────────────────────────
     if module == "vocab":
@@ -2415,11 +2439,11 @@ def main(module: str = "grammar"):
                              key="nav_go"):
                     _clear_lesson()
                     if jump_to in _adp_seq_nav:
-                        # Step is in adaptive sequence — use its index normally
+                        # Step is in adaptive sequence -- use its index normally
                         _new_idx = _adp_seq_nav.index(jump_to)
                         st.session_state["_adaptive_idx"] = _new_idx
                     else:
-                        # Optional step (skipped by adaptive) — insert it after
+                        # Optional step (skipped by adaptive) -- insert it after
                         # current position so adaptive flow continues after it
                         _cur_pos = st.session_state.get("_adaptive_idx", 0)
                         _new_seq = (
@@ -2433,7 +2457,7 @@ def main(module: str = "grammar"):
                     st.rerun()
 
 
-            # \u2500\u2500 Jump to lesson \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+            # -- Jump to lesson ----------------------------------------------------
             if module != "custom":
                 st.markdown("---")
                 st.caption("Jump to lesson")
@@ -2507,10 +2531,10 @@ def main(module: str = "grammar"):
     # Auto-save progress on every step (deduped by (lesson_id, step))
     _save_step_progress(sess, step)
 
-    # \u2500\u2500 Initialise adaptive step sequence (once per lesson) \u2500\u2500\u2500\u2500\u2500\u2500
+    # -- Initialise adaptive step sequence (once per lesson) ------
     _init_adaptive_session(sess)
 
-    # \u2500\u2500 Show pending gamification toasts (queued after rerun) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    # -- Show pending gamification toasts (queued after rerun) ----------
     for _toast_msg in st.session_state.pop("_pending_toasts", []):
         st.toast(_toast_msg, icon="\U0001f389")
 
