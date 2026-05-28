@@ -1697,7 +1697,12 @@ def main():
         # \u2500\u2500 Render lesson step (1\u20135) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
         fn = STEP_FNS.get(step)
         if fn:
-            fn(rows)
+            done = fn(rows)
+            if done:
+                next_step = step + 1
+                clear_step_state()
+                st.session_state["r_step"] = next_step
+                st.rerun()
         else:
             st.error(f"Невідомий крок: {step}")
 
