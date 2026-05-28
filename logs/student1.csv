@@ -465,3 +465,6 @@ timestamp,user_id,lesson_id,phrase_id,step,similarity,response_time_ms,attempts,
 2026-05-24T20:33:09.472594,student1,uk-en-vocab,6,0,7,0.0,1020,1,0,lesson
 2026-05-28T00:39:19.463167,student1,uk-es-grammar,9,0,8,1.0,1154,1,1,lesson
 2026-05-28T10:39:41.921026,student1,en-reading,1,0,5,0.1481,4019,1,0,reading
+2026-05-28T16:53:00.059513,student1,uk-en-vocab,4,25,3,0.1714,23,1,0,lesson
+2026-05-28T16:53:04.723775,student1,uk-en-vocab,4,26,3,1.0,19,1,1,lesson
+2026-05-28T16:53:07.693744,student1,uk-en-vocab,4,27,3,0.4375,25,1,0,lesson

@@ -599,7 +599,7 @@ def phrase_table(phrases, show_native=True, show_target=True, scores=None, highl
     st.markdown(f'<div class="ptable">{html}</div>', unsafe_allow_html=True)
 
 
-def step_hdr(step, title=None, desc=None, total=8):
+def step_hdr(step, title=None, desc=None, total=8, show_image=False):
     """Render the step header.
 
     Title and hint are read from engine.i18n based on the current session's
@@ -678,8 +678,8 @@ def step_hdr(step, title=None, desc=None, total=8):
       </div>
     </div>""", unsafe_allow_html=True)
 
-    # Show lesson illustration only for grammar module
-    if sess and st.session_state.get("practice_module") == "grammar":
+    # Show lesson illustration if requested
+    if show_image and sess:
         _show_lesson_image(sess.state.lesson_id)
 
 
@@ -719,7 +719,7 @@ def do_score(session: LessonSession, audio: bytes, expected: str,
 # ═══════════════════════════════════════════════════════════════════════════
 def step1(session: LessonSession, tts_lang, wh_lang):
     session.start_step(1)
-    step_hdr(1)
+    step_hdr(1, show_image=True)
     phrases = session.phrases()
     scores  = st.session_state.get("s1_scores", {})
 
@@ -758,7 +758,7 @@ def step1(session: LessonSession, tts_lang, wh_lang):
 # ═══════════════════════════════════════════════════════════════════════════
 def step2(session: LessonSession, tts_lang, wh_lang):
     session.start_step(2)
-    step_hdr(2)
+    step_hdr(2, show_image=True)
     phrases = session.phrases()
     paths   = [get_audio_path(p["target"], tts_lang) for p in phrases]
     pauses  = [phrase_pause(p["target"]) for p in phrases]
@@ -783,7 +783,7 @@ def step2(session: LessonSession, tts_lang, wh_lang):
 # ═══════════════════════════════════════════════════════════════════════════
 def step3(session: LessonSession, tts_lang, wh_lang):
     session.start_step(3)
-    step_hdr(3)
+    step_hdr(3, show_image=True)
     phrases = session.phrases()
 
     if "s3_idx" not in st.session_state:
@@ -822,8 +822,8 @@ def step3(session: LessonSession, tts_lang, wh_lang):
             )
 
         st.markdown("**Select the correct translation:**")
-        for choice in st.session_state[f"s3_opts_{idx}"]:
-            if st.button(choice, key=f"s3_{idx}_{choice[:20]}", use_container_width=True):
+        for ci, choice in enumerate(st.session_state[f"s3_opts_{idx}"]):
+            if st.button(choice, key=f"s3_{idx}_{ci}", use_container_width=True):
                 correct = (choice == p["native"])
                 scores[idx] = correct
                 st.session_state["s3_scores"] = scores
@@ -857,7 +857,7 @@ def step3(session: LessonSession, tts_lang, wh_lang):
 # ═══════════════════════════════════════════════════════════════════════════
 def step4(session: LessonSession, tts_lang, wh_lang):
     session.start_step(4)
-    step_hdr(4)
+    step_hdr(4, show_image=True)
     phrases = session.phrases()
 
     # Mic at the top so mobile users don't need to scroll past the phrase list
@@ -896,7 +896,7 @@ def step4(session: LessonSession, tts_lang, wh_lang):
 # ═══════════════════════════════════════════════════════════════════════════
 def step5(session: LessonSession, tts_lang, wh_lang):
     session.start_step(5)
-    step_hdr(5)
+    step_hdr(5, show_image=True)
     phrases = session.phrases()
     paths   = [get_audio_path(p["target"], tts_lang) for p in phrases]
     pauses  = [phrase_pause(p["target"]) for p in phrases]
@@ -921,7 +921,7 @@ def step5(session: LessonSession, tts_lang, wh_lang):
 # ═══════════════════════════════════════════════════════════════════════════
 def step6(session: LessonSession, tts_lang, wh_lang):
     session.start_step(6)
-    step_hdr(6)
+    step_hdr(6, show_image=True)
     phrases = session.phrases()
     scores  = st.session_state.get("s6_scores", {})
 
@@ -963,7 +963,7 @@ _S7_MIN_SIMILARITY        = 0.80  # ≥ 80% similarity
 
 def step7(session: LessonSession, tts_lang, wh_lang):
     session.start_step(7)
-    step_hdr(7)
+    step_hdr(7, show_image=True)
     phrases = session.phrases()
 
     # ── Pass criteria for this lesson ──
@@ -2027,7 +2027,7 @@ def step8(session: LessonSession, tts_lang, wh_lang):
         title = "Grammar Check — Create Your Own Phrases"
         desc  = "Say or type phrases in the target language. The system will correct grammar errors."
 
-    step_hdr(8, total=8)
+    step_hdr(8, total=8, show_image=True)
 
     phrases = session.phrases()
 
