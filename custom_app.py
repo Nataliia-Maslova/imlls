@@ -153,7 +153,7 @@ def render_setup():
         _cu_counts_dict= {int(row["lesson_id"]): int(row["phrases"])
                           for _, row in lessons_df.iterrows()}
 
-        from grammar import _render_wave_plotly
+        from engine.picker import _render_wave_plotly
 
         _cu_clicked = _render_wave_plotly(
             lessons=_cu_lessons,

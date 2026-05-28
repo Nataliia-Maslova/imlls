@@ -1330,7 +1330,7 @@ def render_setup():
     _r_lesson_counts = {int(l): int((df["lesson_id"] == l).sum()) for l in lessons}
     _r_int_lessons   = [int(l) for l in lessons]
 
-    from grammar import _render_wave_plotly
+    from engine.picker import _render_wave_plotly
 
     # ── Unit grouping (10 lessons per unit) ─────────────────────────────────
     _UNIT_SIZE = 10
