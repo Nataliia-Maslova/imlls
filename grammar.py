@@ -1231,6 +1231,28 @@ _TOPIC_META = {
 }
 
 
+# ── Grammar lesson categories (for lesson-picker navigation) ─────────────────
+# Each category covers a lesson-id range that matches the grammar curriculum.
+_GRAMMAR_CATEGORIES = [
+    {"id": "basics",    "icon": "🔤", "name": "Basics",
+     "desc": "Things, identity, possession, location",    "range": (1,   23)},
+    {"id": "nouns",     "icon": "📊", "name": "Nouns & Quantities",
+     "desc": "Plurals, numbers, existence, containers",   "range": (24,  42)},
+    {"id": "habits",    "icon": "📅", "name": "Habits & Commands",
+     "desc": "Daily habits, commands, third-person",      "range": (43,  65)},
+    {"id": "present",   "icon": "⚡", "name": "Present & Future",
+     "desc": "Present continuous, future plans",          "range": (66,  83)},
+    {"id": "modals",    "icon": "💪", "name": "Modals & Comparisons",
+     "desc": "Ability, obligation, permission, conditions, comparisons",
+                                                          "range": (84, 113)},
+    {"id": "past",      "icon": "⏳", "name": "Past Tense",
+     "desc": "Past actions — regular and irregular verbs","range": (114, 138)},
+    {"id": "advanced",  "icon": "🎓", "name": "Advanced",
+     "desc": "Passive, perfect tense, verb patterns, indefinites",
+                                                          "range": (139, 999)},
+]
+
+
 def _build_wave_html(lesson_data_json, default_gid, native, target, user_id, resume_step, extra_params=None):
     """
     Returns a full HTML document for use with components.html().
@@ -1578,12 +1600,33 @@ def _render_wave_native(
                 ):
                     _start_grammar_lesson(lid, cfg, native, target, user_id, lang_pair)
 
+def _render_lesson_dropdown_fallback(
+    lessons, lesson_names, default_lid, resume_step,
+    cfg, native, target, user_id, lang_pair,
+):
+    """Clean dropdown + Start button — replaces the circular-button grid fallback."""
+    if not lessons:
+        return
+    lw   = cfg.get("lesson_word", "Lesson")
+    opts = [lesson_names.get(lid, f"{lw} {lid}") for lid in lessons]
+    defi = lessons.index(default_lid) if default_lid in lessons else 0
+    sel  = st.selectbox(f"Select {lw}", opts, index=defi,
+                        key=f"dd_{lang_pair}")
+    sel_lid    = lessons[opts.index(sel)]
+    is_resume  = (sel_lid == default_lid and resume_step > 1)
+    btn_label  = (f"▶ Resume at Step {resume_step}" if is_resume
+                  else f"▶ Start {lw}")
+    if st.button(btn_label, type="primary", use_container_width=True,
+                 key=f"dd_btn_{lang_pair}"):
+        _start_grammar_lesson(sel_lid, cfg, native, target, user_id, lang_pair)
+
+
 def _render_flat_wave_nav(
     df, cfg, lang_pair, native, target, user_id,
     lessons, default_idx, resume_step, resume_msg, progress,
     counts_by_lid, topics_map,
 ):
-    """Flat wave lesson picker — native Streamlit buttons, no iframe."""
+    """Flat wave lesson picker with category/unit filter and dropdown fallback."""
     if resume_msg:
         st.info(resume_msg)
 
@@ -1596,9 +1639,57 @@ def _render_flat_wave_nav(
 
     lesson_names = {lid: _lesson_name(lid) for lid in lessons}
 
+    # ── Category / Unit filter ──────────────────────────────────────────────
+    # Grammar: predefined categories by lesson-id range.
+    # Other modules: auto-generated numeric unit blocks (~15 lessons each).
+    module = cfg.get("lang_suffix", "grammar")
+    available_set = set(lessons)
+
+    if module == "grammar":
+        cats = [c for c in _GRAMMAR_CATEGORIES
+                if any(c["range"][0] <= lid <= c["range"][1] for lid in available_set)]
+        if cats:
+            cat_labels = [f'{c["icon"]} {c["name"]}' for c in cats]
+            def_cat_idx = next(
+                (i for i, c in enumerate(cats)
+                 if c["range"][0] <= default_gid <= c["range"][1]),
+                0,
+            )
+            sel_cat_lbl = st.selectbox(
+                "📚 Category", cat_labels, index=def_cat_idx,
+                key=f"gram_cat_{lang_pair}",
+            )
+            sel_cat = cats[cat_labels.index(sel_cat_lbl)]
+            filtered = [lid for lid in lessons
+                        if sel_cat["range"][0] <= lid <= sel_cat["range"][1]]
+        else:
+            filtered = lessons
+    else:
+        BLOCK = 15
+        blocks = []
+        for i in range(0, len(lessons), BLOCK):
+            blk = lessons[i:i + BLOCK]
+            first = lesson_names.get(blk[0], f"Lesson {blk[0]}")
+            short = (first[:22] + "…") if len(first) > 22 else first
+            blocks.append({"label": f"Unit {i // BLOCK + 1}: {short}", "lids": blk})
+        def_blk = next((i for i, b in enumerate(blocks) if default_gid in b["lids"]), 0)
+        sel_blk_lbl = st.selectbox(
+            "📚 Unit", [b["label"] for b in blocks], index=def_blk,
+            key=f"gram_unit_{lang_pair}",
+        )
+        sel_blk  = blocks[[b["label"] for b in blocks].index(sel_blk_lbl)]
+        filtered = sel_blk["lids"]
+
+    if default_gid not in filtered:
+        default_gid = filtered[0] if filtered else default_gid
+
+    if not filtered:
+        st.warning("No lessons available in this category.")
+        return
+
     _key = f"{lang_pair}_{cfg.get('lang_suffix', 'g')}"
     clicked = _render_wave_plotly(
-        lessons=lessons,
+        lessons=filtered,
         lesson_names=lesson_names,
         lesson_counts=counts_by_lid,
         default_lid=default_gid,
@@ -1608,10 +1699,9 @@ def _render_flat_wave_nav(
     if clicked is not None:
         _start_grammar_lesson(clicked, cfg, native, target, user_id, lang_pair)
     else:
-        _render_wave_native(
-            lessons=lessons,
+        _render_lesson_dropdown_fallback(
+            lessons=filtered,
             lesson_names=lesson_names,
-            lesson_counts=counts_by_lid,
             default_lid=default_gid,
             resume_step=resume_step,
             cfg=cfg,
@@ -1704,10 +1794,9 @@ def _render_vocab_nav(
     if _vclicked is not None:
         _start_grammar_lesson(_vclicked, cfg, native, target, user_id, lang_pair)
     else:
-        _render_wave_native(
+        _render_lesson_dropdown_fallback(
             lessons=_vocab_lessons,
             lesson_names=lesson_names_dict,
-            lesson_counts=counts_by_lid,
             default_lid=default_gid,
             resume_step=resume_step,
             cfg=cfg,

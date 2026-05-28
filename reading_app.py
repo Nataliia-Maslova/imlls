@@ -1332,52 +1332,55 @@ def render_setup():
 
     from grammar import _render_wave_plotly
 
-    # Plotly wave (Streamlit ≥ 1.33 + plotly installed), else native buttons
+    # ── Unit grouping (10 lessons per unit) ─────────────────────────────────
+    _UNIT_SIZE = 10
+    _r_units   = []
+    for _ui in range(0, len(_r_int_lessons), _UNIT_SIZE):
+        _u_lids = _r_int_lessons[_ui:_ui + _UNIT_SIZE]
+        _r_units.append({
+            "label": f"Unit {_ui // _UNIT_SIZE + 1}  ({_lesson_word} {_u_lids[0]}–{_u_lids[-1]})",
+            "lids":  _u_lids,
+        })
+
+    _def_unit_idx = next(
+        (i for i, u in enumerate(_r_units) if default_lid in u["lids"]), 0
+    )
+    _sel_unit_lbl = st.selectbox(
+        "📚 Unit",
+        [u["label"] for u in _r_units],
+        index=_def_unit_idx,
+        key=f"r_unit_{chosen_lang}",
+    )
+    _sel_unit         = _r_units[[u["label"] for u in _r_units].index(_sel_unit_lbl)]
+    _filtered_r       = _sel_unit["lids"]
+    _r_default_lid    = default_lid if default_lid in _filtered_r else _filtered_r[0]
+
+    # Plotly wave (Streamlit ≥ 1.33 + plotly installed), else dropdown fallback
     _r_clicked = _render_wave_plotly(
-        lessons=_r_int_lessons,
+        lessons=_filtered_r,
         lesson_names=_r_lesson_names,
         lesson_counts=_r_lesson_counts,
-        default_lid=default_lid,
+        default_lid=_r_default_lid,
         resume_step=resume_step,
         key_suffix=f"reading_{chosen_lang}",
     )
     if _r_clicked is not None:
         _start_reading_lesson(_r_clicked)
     else:
-        # Fallback: circular native Streamlit buttons
-        EMOJIS_R = ['📖','🌟','💡','🎯','🔤','🗣️','✏️','📝','🎓','💬','🔑','🏆']
-        st.markdown("""
-<style>
-[data-testid="stHorizontalBlock"] [data-testid="stButton"] button {
-    border-radius: 50% !important;
-    width: 76px !important; height: 76px !important;
-    min-width: 76px !important; padding: 3px !important;
-    font-size: 0.57rem !important; line-height: 1.22 !important;
-    white-space: pre-wrap !important; overflow: hidden !important;
-    text-align: center !important;
-}
-</style>""", unsafe_allow_html=True)
-        n_r = len(_r_int_lessons)
-        ROW_R = 10
-        for _rs in range(0, n_r, ROW_R):
-            _row = _r_int_lessons[_rs:_rs + ROW_R]
-            _cols = st.columns(len(_row))
-            for _ci, (_col, _lid) in enumerate(zip(_cols, _row)):
-                _gidx = _rs + _ci
-                _emoji = EMOJIS_R[_gidx % len(EMOJIS_R)]
-                _count = _r_lesson_counts.get(_lid, 0)
-                _is_def = (_lid == default_lid)
-                _badge = f"↩{resume_step} " if (_is_def and resume_step > 1) else ""
-                _label = f"{_badge}{_emoji}\n{_lesson_word} {_lid}"
-                with _col:
-                    if st.button(
-                        _label,
-                        key=f"rv_{_lid}_{_gidx}",
-                        type="primary" if _is_def else "secondary",
-                        use_container_width=False,
-                        help=f"Урок {_lid} · {_count} слів",
-                    ):
-                        _start_reading_lesson(_lid)
+        # Clean dropdown fallback — replaces the circular button grid
+        _r_opts  = [_r_lesson_names.get(_lid, f"{_lesson_word} {_lid}") for _lid in _filtered_r]
+        _r_def_i = _filtered_r.index(_r_default_lid) if _r_default_lid in _filtered_r else 0
+        _r_sel   = st.selectbox(
+            f"Select {_lesson_word}", _r_opts, index=_r_def_i,
+            key=f"r_dd_{chosen_lang}",
+        )
+        _r_sel_lid   = _filtered_r[_r_opts.index(_r_sel)]
+        _r_is_resume = (_r_sel_lid == _r_default_lid and resume_step > 1)
+        _r_btn_lbl   = (f"▶ Resume at Step {resume_step}" if _r_is_resume
+                        else f"▶ Start {_lesson_word}")
+        if st.button(_r_btn_lbl, type="primary", use_container_width=True,
+                     key=f"r_dd_btn_{chosen_lang}"):
+            _start_reading_lesson(_r_sel_lid)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1696,7 +1699,7 @@ def main():
         if fn:
             fn(rows)
         else:
-            st.error(f"\u041d\u0435\u0432\u0456\u0434\u043e\u043c\u0438\u0439 \u043a\u0440\u043e\u043a: {step}")
+            st.error(f"Невідомий крок: {step}")
 
 
 if __name__ == "__main__":
