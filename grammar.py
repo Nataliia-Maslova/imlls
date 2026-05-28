@@ -678,8 +678,8 @@ def step_hdr(step, title=None, desc=None, total=8):
       </div>
     </div>""", unsafe_allow_html=True)
 
-    # Show lesson illustration on every step
-    if sess:
+    # Show lesson illustration only for grammar module
+    if sess and st.session_state.get("practice_module") == "grammar":
         _show_lesson_image(sess.state.lesson_id)
 
 
