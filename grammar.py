@@ -15,6 +15,26 @@ import pandas as pd
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 
+LESSON_IMG_DIR = ROOT / "static" / "lesson_images"
+
+@st.cache_data(show_spinner=False)
+def _lesson_img_b64(lesson_id: int) -> str | None:
+    """Return base64 data-URL for a lesson illustration, or None if missing."""
+    p = LESSON_IMG_DIR / f"lesson_{lesson_id:03d}.png"
+    if not p.exists():
+        return None
+    return "data:image/png;base64," + base64.b64encode(p.read_bytes()).decode()
+
+def _show_lesson_image(lesson_id: int, max_width_px: int = 340):
+    """Show centered lesson illustration if the file exists."""
+    p = LESSON_IMG_DIR / f"lesson_{lesson_id:03d}.png"
+    if not p.exists():
+        return
+    # Center by putting image in a middle column
+    _, mid, _ = st.columns([1, 2, 1])
+    with mid:
+        st.image(str(p), use_container_width=True)
+
 from engine.loader  import (load_phrases, get_lesson, get_available_lessons,
                             get_lesson_topics as get_grammar_topics,
                             TTS_LANG, WHISPER_LANG)
@@ -657,6 +677,10 @@ def step_hdr(step, title=None, desc=None, total=8):
         </div>
       </div>
     </div>""", unsafe_allow_html=True)
+
+    # Show lesson illustration on every step
+    if sess:
+        _show_lesson_image(sess.state.lesson_id)
 
 
 def _audio_duration_ms(audio_bytes: bytes) -> int:
@@ -1535,19 +1559,30 @@ def _render_wave_plotly(
     )
 
     # ── Handle click ─────────────────────────────────────────────────────────
-    if not event:
-        return None
-    try:
-        pts = getattr(event.selection, 'points', None) or event.selection.get('points', [])
-    except Exception:
-        return None
+    clicked_lid = None
+    if event:
+        try:
+            pts = getattr(event.selection, 'points', None) or event.selection.get('points', [])
+        except Exception:
+            pts = []
+        for pt in pts:
+            if pt.get('curve_number', -1) == 1:
+                idx = pt.get('point_number', pt.get('point_index', -1))
+                if 0 <= idx < n:
+                    clicked_lid = lessons[idx]
+                    break
 
-    for pt in pts:
-        if pt.get('curve_number', -1) == 1:          # circles trace
-            idx = pt.get('point_number', pt.get('point_index', -1))
-            if 0 <= idx < n:
-                return lessons[idx]
-    return None
+    # ── Lesson preview card (image + name for selected lesson) ───────────────
+    preview_lid = clicked_lid if clicked_lid is not None else default_lid
+    preview_img = LESSON_IMG_DIR / f"lesson_{preview_lid:03d}.png"
+    preview_name = lesson_names.get(preview_lid, f"Lesson {preview_lid}")
+    if preview_img.exists():
+        col_l, col_m, col_r = st.columns([2, 1, 2])
+        with col_m:
+            st.image(str(preview_img), use_container_width=True)
+            st.caption(f"**{preview_name}**")
+
+    return clicked_lid
 
 
 def _render_wave_native(
@@ -2623,33 +2658,17 @@ def main(module: str = "grammar"):
     # -- Initialise adaptive step sequence (once per lesson) ------
     _init_adaptive_session(sess)
 
-    # -- Show pending gamification toasts (queued after rerun) ----------
-    for _toast_msg in st.session_state.pop("_pending_toasts", []):
-        st.toast(_toast_msg, icon="\U0001f389")
+    # -- Dispatch to current step -----------------------------------------
+    done = STEPS[step](sess, tts, wh)
 
-    fn = STEPS.get(step)
-    if fn:
-        done = fn(sess, tts, wh)
-        if done:
-            try:
-                _sim = float(st.session_state.get("_last_similarity", 0.0))
-                _lang = {"English":"en","Ukrainian":"uk","Spanish":"es","Korean":"ko"}.get(st.session_state.get("launcher_native","English"),"en")
-                _gres = on_step_complete(sess.state.user_id, step, _sim, _lang)
-                _toasts = []
-                if _gres.get("leveled_up"):
-                    _toasts.append(f"⭐ Новий рівень {_gres['level_num']}: {_gres['level_name']}! +{_gres['xp_earned']} XP")
-                for _bid, _bem, _bname, _bdesc in _gres.get("new_badges", []):
-                    _toasts.append(f"{_bem} Бейдж «{_bname}»: {_bdesc}!")
-                if not _gres.get("leveled_up") and not _gres.get("new_badges"):
-                    _toasts.append(f"⭐ +{_gres['xp_earned']} XP")
-                st.session_state["_pending_toasts"] = (
-                    st.session_state.get("_pending_toasts", []) + _toasts
-                )
-            except Exception:
-                pass
-            st.session_state["lesson_step"] = step + 1
-            st.rerun()
-
-
-if __name__ == "__main__":
-    main()
+    if done:
+        _clear_lesson()
+        adp_seq = st.session_state.get("_adaptive_steps", list(range(1, 9)))
+        adp_idx = st.session_state.get("_adaptive_idx", 0)
+        nxt     = adp_idx + 1
+        if nxt < len(adp_seq):
+            st.session_state["_adaptive_idx"] = nxt
+            st.session_state["lesson_step"]   = adp_seq[nxt]
+        else:
+            st.session_state["lesson_step"]   = 9   # triggers render_complete
+        st.rerun()
