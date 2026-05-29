@@ -744,11 +744,21 @@ REQUIRED = {1, 2, 3}
 # ── UI strings per native language ────────────────────────────────────────
 READING_UI = {
     "Ukrainian": {
-        "step1": "Послухай і повтори",
+        "step1": "Слухай і повторюй",
+        "step1_icon": "🎧",
+        "step1_hint": "🎧 Слухай → ⏸ пауза → 🎤 повтори кожну фразу.",
         "step2": "Прочитай слова",
-        "step3": "Послухай і знайди",
-        "step4": "Послухай і повтори",
+        "step2_icon": "👁️",
+        "step2_hint": "🎤 Запиши себе вголос і перевір вимову.",
+        "step3": "Послухай і знайди переклад",
+        "step3_icon": "🎯",
+        "step3_hint": "🎧 Слухай → 👆 натисни правильний переклад.",
+        "step4": "Повтори вголос",
+        "step4_icon": "🎤",
+        "step4_hint": "🎧 Слухай → 🎤 повтори → перевір результат.",
         "step5": "Прочитай на час",
+        "step5_icon": "⏱️",
+        "step5_hint": "📖 Прочитай всі слова вголос якомога швидше.",
         "step_label":      "КРОК",
         "required":        "обов'язковий",
         "continue":        "Продовжити →",
@@ -789,10 +799,20 @@ READING_UI = {
     },
     "English": {
         "step1": "Listen & Repeat",
+        "step1_icon": "🎧",
+        "step1_hint": "🎧 Listen → ⏸ pause → 🎤 repeat each phrase.",
         "step2": "Read the Words",
+        "step2_icon": "👁️",
+        "step2_hint": "🎤 Record yourself and check your pronunciation.",
         "step3": "Listen & Find",
-        "step4": "Listen & Repeat",
+        "step3_icon": "🎯",
+        "step3_hint": "🎧 Listen → 👆 tap the correct translation.",
+        "step4": "Repeat Aloud",
+        "step4_icon": "🎤",
+        "step4_hint": "🎧 Listen → 🎤 repeat → check your result.",
         "step5": "Speed Reading",
+        "step5_icon": "⏱️",
+        "step5_hint": "📖 Read all words aloud as fast as you can.",
         "step_label":      "STEP",
         "required":        "required",
         "continue":        "Continue →",
@@ -833,10 +853,20 @@ READING_UI = {
     },
     "Spanish": {
         "step1": "Escucha y repite",
+        "step1_icon": "🎧",
+        "step1_hint": "🎧 Escucha → ⏸ pausa → 🎤 repite cada frase.",
         "step2": "Lee las palabras",
+        "step2_icon": "👁️",
+        "step2_hint": "🎤 Grábate y verifica tu pronunciación.",
         "step3": "Escucha y encuentra",
-        "step4": "Escucha y repite",
+        "step3_icon": "🎯",
+        "step3_hint": "🎧 Escucha → 👆 toca la traducción correcta.",
+        "step4": "Repite en voz alta",
+        "step4_icon": "🎤",
+        "step4_hint": "🎧 Escucha → 🎤 repite → verifica tu resultado.",
         "step5": "Lectura veloz",
+        "step5_icon": "⏱️",
+        "step5_hint": "📖 Lee todas las palabras en voz alta lo más rápido posible.",
         "step_label":      "PASO",
         "required":        "obligatorio",
         "continue":        "Continuar →",
@@ -877,10 +907,20 @@ READING_UI = {
     },
     "Korean": {
         "step1": "듣고 따라 말하기",
+        "step1_icon": "🎧",
+        "step1_hint": "🎧 듣기 → ⏸ 일시정지 → 🎤 각 문장 따라 말하기.",
         "step2": "단어 읽기",
+        "step2_icon": "👁️",
+        "step2_hint": "🎤 녹음하여 발음을 확인하세요.",
         "step3": "듣고 찾기",
-        "step4": "듣고 따라 말하기",
+        "step3_icon": "🎯",
+        "step3_hint": "🎧 듣기 → 👆 올바른 번역 누르기.",
+        "step4": "소리 내어 반복",
+        "step4_icon": "🎤",
+        "step4_hint": "🎧 듣기 → 🎤 반복 → 결과 확인.",
         "step5": "빠른 읽기",
+        "step5_icon": "⏱️",
+        "step5_hint": "📖 최대한 빠르게 모든 단어를 소리 내어 읽으세요.",
         "step_label":      "단계",
         "required":        "필수",
         "continue":        "계속 →",
@@ -938,31 +978,17 @@ def current_step() -> int:
 
 
 def shdr(step: int):
-    pills = ""
-    for s in range(1, 6):
-        if s == current_step():
-            style = "background:var(--mova-indigo-soft);color:var(--mova-indigo);border:1px solid var(--mova-indigo)"
-        elif s < current_step():
-            style = "background:var(--mova-mint-soft);color:var(--mova-mint);border:1px solid var(--mova-mint)"
-        elif s in REQUIRED:
-            style = "background:var(--mova-amber-soft);color:var(--mova-amber-ink);border:1px solid var(--mova-amber)"
-        else:
-            style = "background:var(--mova-card);color:var(--mova-ink-3);border:1px solid var(--mova-line)"
-        lbl = f"{'🔒' if s in REQUIRED and s > current_step() else s}"
-        pills += f'<span class="spill" style="{style}">{lbl}</span>'
-
-    req_note = ""
-    if step in REQUIRED:
-        req_note = f' <span style="color:var(--mova-amber-ink);font-size:.72rem">🔒 {_ui("required")}</span>'
-
-    st.markdown(f'<div style="margin-bottom:10px">{pills}</div>', unsafe_allow_html=True)
+    icon  = _ui(f"step{step}_icon")
+    title = _ui(f"step{step}")
+    hint  = _ui(f"step{step}_hint")
     st.markdown(
-        f'<div style="background:var(--mova-card);'
-        f'border:1px solid var(--mova-line);border-radius:14px;padding:14px 20px;margin-bottom:14px">'
-        f'<div style="color:var(--mova-indigo);font-size:.75rem;font-family:JetBrains Mono,monospace">'
-        f'{_ui("step_label")} {step} / 5{req_note}</div>'
-        f'<div style="color:var(--mova-ink);font-size:1.15rem;font-weight:600">{_r_steps()[step]}</div>'
-        f'</div>',
+        f'<div class="step-header">'
+        f'<div class="step-icon-row">'
+        f'<span class="step-icon-big">{icon}</span>'
+        f'<div style="flex:1">'
+        f'<div class="step-title">{title}</div>'
+        f'<div class="step-desc">{hint}</div>'
+        f'</div></div></div>',
         unsafe_allow_html=True,
     )
     _banner = APP_IMG_DIR / "reading_banner.png"
@@ -1602,6 +1628,11 @@ def _inject_css():
 html,body,[class*="css"]{font-family:'Inter',sans-serif;}
 /* removed: was fighting Mova surface; theme is now driven by tokens.css */
 #MainMenu,footer{visibility:hidden;}
+.step-header{background:var(--mova-card);border:1px solid var(--mova-line);border-left:4px solid var(--mova-indigo);border-radius:14px;padding:18px 26px;margin-bottom:18px;}
+.step-icon-row{display:flex;align-items:center;gap:16px;margin-top:6px;}
+.step-icon-big{font-size:2rem;line-height:1;}
+.step-title{color:var(--mova-ink);font-size:1.25rem;font-weight:600;}
+.step-desc{color:var(--mova-ink-2);font-size:.88rem;margin-top:5px;}
 /* Keep Streamlit's sidebar collapse/expand control reachable on every device,
    including iOS Safari, where the control would otherwise be invisible. */
 header{background:transparent !important;}

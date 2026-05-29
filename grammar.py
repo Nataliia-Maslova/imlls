@@ -630,8 +630,6 @@ def step_hdr(step, title=None, desc=None, total=8, show_image=False):
 
     st.markdown(f"""
     <div class="step-header step-type-{s_type}">
-      <div class="step-pills">{pills}</div>
-      <div class="step-num">{step_label} {pos_label} / {adp_total}{req_note}</div>
       <div class="step-icon-row">
         <span class="step-icon-big">{icon}</span>
         <div style="flex:1">
@@ -2023,6 +2021,11 @@ def main(module: str = "grammar"):
                 )
             except Exception:
                 pass
+            # Advance adaptive position index to match the new step
+            _adp_seq = st.session_state.get("_adaptive_steps", [])
+            _adp_idx = st.session_state.get("_adaptive_idx", 0)
+            if _adp_idx + 1 < len(_adp_seq):
+                st.session_state["_adaptive_idx"] = _adp_idx + 1
             st.session_state["lesson_step"] = step + 1
             st.rerun()
 
