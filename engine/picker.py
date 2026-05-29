@@ -290,6 +290,7 @@ def _start_grammar_lesson(lid, cfg, native, target, user_id, lang_pair):
 def _render_wave_plotly(
     lessons, lesson_names, lesson_counts,
     default_lid, resume_step, key_suffix="wave",
+    show_lesson_image=True,
 ):
     """
     Snake-path lesson picker using Plotly interactive scatter chart.
@@ -421,15 +422,16 @@ def _render_wave_plotly(
                     clicked_lid = lessons[idx]
                     break
 
-    # ── Lesson preview card (image + name for selected lesson) ───────────────
-    preview_lid = clicked_lid if clicked_lid is not None else default_lid
-    preview_img = LESSON_IMG_DIR / f"lesson_{preview_lid:03d}.png"
-    preview_name = lesson_names.get(preview_lid, f"Lesson {preview_lid}")
-    if preview_img.exists():
-        col_l, col_m, col_r = st.columns([2, 1, 2])
-        with col_m:
-            st.image(str(preview_img), use_container_width=True)
-            st.caption(f"**{preview_name}**")
+    # ── Lesson preview card (grammar only) ───────────────────────────────────
+    if show_lesson_image:
+        preview_lid = clicked_lid if clicked_lid is not None else default_lid
+        preview_img = LESSON_IMG_DIR / f"lesson_{preview_lid:03d}.png"
+        preview_name = lesson_names.get(preview_lid, f"Lesson {preview_lid}")
+        if preview_img.exists():
+            col_l, col_m, col_r = st.columns([2, 1, 2])
+            with col_m:
+                st.image(str(preview_img), use_container_width=True)
+                st.caption(f"**{preview_name}**")
 
     return clicked_lid
 
@@ -674,6 +676,7 @@ def _render_vocab_nav(
         default_lid=default_gid,
         resume_step=resume_step,
         key_suffix=_vkey,
+        show_lesson_image=False,
     )
     if _vclicked is not None:
         _start_grammar_lesson(_vclicked, cfg, native, target, user_id, lang_pair)
@@ -689,5 +692,3 @@ def _render_vocab_nav(
             user_id=user_id,
             lang_pair=lang_pair,
         )
-
-

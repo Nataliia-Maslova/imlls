@@ -16,6 +16,55 @@ ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 
 LESSON_IMG_DIR = ROOT / "static" / "lesson_images"
+APP_IMG_DIR    = ROOT / "static" / "app_images"
+
+# Mapping from vocab sheet names (as stored in df["topic"]) to image slugs.
+_TOPIC_SLUG: dict[str, str] = {
+    # Keys must match EXACT sheet names in vocabulary.xlsx (incl. truncation)
+    "Greetings, Basics & Courtesy":        "greetings",
+    "Questions, Directions & Emergen":     "questions",   # truncated to 30 chars
+    "Daily Life, Routine & Feelings":      "daily_life",
+    "Basic":                               "basic",
+    "Verbs":                               "verbs",
+    "Food":                                "food",
+    "City":                                "city",
+    "Restaurant, Food & Shopping":         "restaurant_food_shopping",
+    "Travel, Lodging & Weather":           "travel_lodging_weather",
+    "Emotions":                            "emotions",
+    "House and Home":                      "house",
+    "Weather":                             "weather",
+    "Shopping":                            "shopping",
+    "Daily Routine":                       "daily_routine",
+    "At the Doctor":                       "doctor",
+    "Food and Drinks":                     "food_drinks",
+    "Work":                                "work",
+    "School":                              "school",
+    "Travel":                              "travel",
+    "Hobbies":                             "hobbies",
+    "Clothes":                             "clothes",
+    "Transport":                           "transport",
+    "Restaurant":                          "restaurant",
+    "Friends and Relationships":           "friends",
+    "Family":                              "family",
+    "Technology":                          "technology",
+    "Holidays":                            "holidays",
+    "Sports":                              "sports",
+    "City and Directions":                 "city_directions",
+}
+
+
+def _show_vocab_image(topic: str):
+    """Show centered vocab topic illustration if the file exists."""
+    slug = _TOPIC_SLUG.get(topic)
+    if not slug:
+        return
+    p = APP_IMG_DIR / f"vocab_{slug}.png"
+    if not p.exists():
+        return
+    _, mid, _ = st.columns([1, 2, 1])
+    with mid:
+        st.image(str(p), use_container_width=True)
+
 
 @st.cache_data(show_spinner=False)
 def _lesson_img_b64(lesson_id: int) -> str | None:
@@ -497,6 +546,12 @@ def phrase_table(phrases, show_native=True, show_target=True, scores=None, highl
     st.markdown(f'<div class="ptable">{html}</div>', unsafe_allow_html=True)
 
 
+def _try_first_msg(session: "LessonSession") -> str:
+    """Return a localized 'try the exercise first' tooltip in the user's native language."""
+    native_lang = session.state.native_lang if session else "English"
+    return i18n.get(native_lang, "try_first")
+
+
 def step_hdr(step, title=None, desc=None, total=8, show_image=False):
     """Render the step header.
 
@@ -578,7 +633,18 @@ def step_hdr(step, title=None, desc=None, total=8, show_image=False):
 
     # Show lesson illustration if requested
     if show_image and sess:
-        _show_lesson_image(sess.state.lesson_id)
+        _mod = _current_module()
+        if _mod == "vocab" and len(sess.df) > 0:
+            topic = sess.df.iloc[0].get("topic", "")
+            _show_vocab_image(topic)
+        elif _mod == "grammar":
+            _show_lesson_image(sess.state.lesson_id)
+        elif _mod == "custom":
+            _p = APP_IMG_DIR / "my_phrases_banner.png"
+            if _p.exists():
+                _, _mid, _ = st.columns([1, 2, 1])
+                with _mid:
+                    st.image(str(_p), use_container_width=True)
 
 
 def _audio_duration_ms(audio_bytes: bytes) -> int:
@@ -644,8 +710,11 @@ def step1(session: LessonSession, tts_lang, wh_lang):
     # Phrase list
     phrase_table(phrases, show_native=True, show_target=True, scores=scores)
 
-    # Next button below phrases
-    if st.button("Next →", use_container_width=True, key="s1_next"):
+    # Next button — active only after the user has recorded at least once
+    attempted = bool(audio) or bool(st.session_state.get("s1_scores"))
+    if st.button("Next →", use_container_width=True, key="s1_next",
+                 disabled=not attempted,
+                 help=None if attempted else _try_first_msg(session)):
         st.session_state.pop("s1_char_shown", None)
         return True
     return False
@@ -670,8 +739,14 @@ def step2(session: LessonSession, tts_lang, wh_lang):
         height=height, scrolling=True,
     )
 
-    if st.button("Continue to Step 3 →", type="primary", use_container_width=True):
+    # Mark attempted as soon as the playlist renders (audio autoplays)
+    st.session_state["s2_attempted"] = True
+    attempted = st.session_state.get("s2_attempted", False)
+    if st.button("Continue to Step 3 →", type="primary", use_container_width=True,
+                 disabled=not attempted,
+                 help=None if attempted else _try_first_msg(session)):
         st.session_state.pop("s2_active", None)
+        st.session_state.pop("s2_attempted", None)
         return True
     return False
 
@@ -782,8 +857,11 @@ def step4(session: LessonSession, tts_lang, wh_lang):
     # Phrase list
     phrase_table(phrases, show_native=False, show_target=True)
 
-    # Done button below phrases
-    if st.button("Done →", use_container_width=True, key="s4_done"):
+    # Done button — active only after the user has recorded at least once
+    attempted = bool(audio) or "s4_result" in st.session_state
+    if st.button("Done →", use_container_width=True, key="s4_done",
+                 disabled=not attempted,
+                 help=None if attempted else _try_first_msg(session)):
         st.session_state.pop("s4_result", None)
         return True
     return False
@@ -808,8 +886,14 @@ def step5(session: LessonSession, tts_lang, wh_lang):
         height=height, scrolling=True,
     )
 
-    if st.button("Continue to Step 6 →", type="primary", use_container_width=True):
+    # Mark attempted as soon as the playlist renders (audio autoplays)
+    st.session_state["s5_attempted"] = True
+    attempted = st.session_state.get("s5_attempted", False)
+    if st.button("Continue to Step 6 →", type="primary", use_container_width=True,
+                 disabled=not attempted,
+                 help=None if attempted else _try_first_msg(session)):
         st.session_state.pop("s5_active", None)
+        st.session_state.pop("s5_attempted", None)
         return True
     return False
 
@@ -843,8 +927,11 @@ def step6(session: LessonSession, tts_lang, wh_lang):
     # Phrase list (native shown, target hidden)
     phrase_table(phrases, show_native=True, show_target=False, scores=scores)
 
-    # Next button below phrases
-    if st.button("Next →", use_container_width=True, key="s6_next"):
+    # Next button — active only after the user has recorded at least once
+    attempted = bool(audio) or bool(st.session_state.get("s6_scores"))
+    if st.button("Next →", use_container_width=True, key="s6_next",
+                 disabled=not attempted,
+                 help=None if attempted else _try_first_msg(session)):
         st.session_state["s6_idx"] = 0
         st.session_state.pop("s6_char_shown", None)
         return True
@@ -1387,6 +1474,7 @@ def step8(session: LessonSession, tts_lang, wh_lang):
 
     # ── Navigation ────────────────────────────────────────────────────────
     st.markdown("---")
+    attempted = bool(st.session_state.get("s8_results"))
     c1, c2 = st.columns(2)
     with c1:
         if st.button("🔄 Try again", use_container_width=True, key="s8_retry"):
@@ -1394,7 +1482,9 @@ def step8(session: LessonSession, tts_lang, wh_lang):
             st.rerun()
     with c2:
         if st.button("Complete Lesson ✓", type="primary",
-                     use_container_width=True, key="s8_complete"):
+                     use_container_width=True, key="s8_complete",
+                     disabled=not attempted,
+                     help=None if attempted else _try_first_msg(session)):
             st.session_state.pop("s8_results", None)
             return True
     return False
@@ -1842,10 +1932,11 @@ def main(module: str = "grammar"):
                             # Clear adaptive so it reinitialises for the new lesson
                             st.session_state.pop("_adaptive_lesson_id", None)
                             st.session_state.update({
-                                "session":     LessonSession(
-                                                   state.user_id, _ldf, _jump_lid,
-                                                   state.native_lang, state.target_lang,
-                                                   language_pair=_lp),
+                                "session": LessonSession(
+                                    state.user_id, _ldf, _jump_lid,
+                                    state.native_lang, state.target_lang,
+                                    language_pair=_lp,
+                                ),
                                 "lesson_step": 1,
                                 "tts_lang":    TTS_LANG.get(state.target_lang, "en"),
                                 "wh_lang":     WHISPER_LANG.get(state.target_lang),
@@ -1856,13 +1947,12 @@ def main(module: str = "grammar"):
                     pass
 
             st.markdown("---")
-        if st.button("\U0001f3e0 Main menu"):
-            _clear_all()
-            st.rerun()
+            if st.button("\U0001f3e0 Main menu", use_container_width=True, key="sb_home"):
+                _clear_all()
+                st.rerun()
 
     if "lesson_step" not in st.session_state:
         if module == "custom":
-            # Custom mode owns its own setup screen (lesson list + add form)
             import custom_app
             custom_app.render_setup()
             return
@@ -1875,28 +1965,45 @@ def main(module: str = "grammar"):
     step = st.session_state["lesson_step"]
 
     if step > 8 or sess.state.lesson_complete:
-        # Mark this lesson as fully completed (sentinel last_step=99)
         _save_step_progress(sess, 99)
         render_complete(sess)
         return
 
-    # Auto-save progress on every step (deduped by (lesson_id, step))
     _save_step_progress(sess, step)
-
-    # -- Initialise adaptive step sequence (once per lesson) ------
     _init_adaptive_session(sess)
 
-    # -- Dispatch to current step -----------------------------------------
-    done = STEPS[step](sess, tts, wh)
+    for _toast_msg in st.session_state.pop("_pending_toasts", []):
+        st.toast(_toast_msg, icon="\U0001f389")
 
-    if done:
-        _clear_lesson()
-        adp_seq = st.session_state.get("_adaptive_steps", list(range(1, 9)))
-        adp_idx = st.session_state.get("_adaptive_idx", 0)
-        nxt     = adp_idx + 1
-        if nxt < len(adp_seq):
-            st.session_state["_adaptive_idx"] = nxt
-            st.session_state["lesson_step"]   = adp_seq[nxt]
-        else:
-            st.session_state["lesson_step"]   = 9   # triggers render_complete
-        st.rerun()
+    fn = STEPS.get(step)
+    if fn:
+        done = fn(sess, tts, wh)
+        if done:
+            try:
+                _sim  = float(st.session_state.get("_last_similarity", 0.0))
+                _lang = {
+                    "en": "English", "uk": "Ukrainian",
+                    "es": "Spanish",  "ko": "Korean",
+                }.get(st.session_state.get("launcher_native", "English"), "en")
+                _gres   = on_step_complete(sess.state.user_id, step, _sim, _lang)
+                _toasts = []
+                if _gres.get("leveled_up"):
+                    _toasts.append(
+                        f"\u2b50 \u041d\u043e\u0432\u0438\u0439 \u0440\u0456\u0432\u0435\u043d\u044c {_gres['level_num']}: "
+                        f"{_gres['level_name']}! +{_gres['xp_earned']} XP"
+                    )
+                for _bid, _bem, _bname, _bdesc in _gres.get("new_badges", []):
+                    _toasts.append(f"{_bem} \u0411\u0435\u0439\u0434\u0436 \u00ab{_bname}\u00bb: {_bdesc}!")
+                if not _gres.get("leveled_up") and not _gres.get("new_badges"):
+                    _toasts.append(f"\u2b50 +{_gres['xp_earned']} XP")
+                st.session_state["_pending_toasts"] = (
+                    st.session_state.get("_pending_toasts", []) + _toasts
+                )
+            except Exception:
+                pass
+            st.session_state["lesson_step"] = step + 1
+            st.rerun()
+
+
+if __name__ == "__main__":
+    main()
