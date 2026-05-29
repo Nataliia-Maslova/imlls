@@ -1184,11 +1184,16 @@ def render_setup():
     cfg    = _module_config(module)
 
     st.markdown(f"""
-    <div style="text-align:center;padding:48px 0 24px">
-      <div style="font-size:3rem">{cfg['icon']}</div>
-      <h1 style="color:var(--mova-ink);font-weight:600;margin:10px 0 4px">IMLLS — {cfg['label']}</h1>
-      <p style="color:var(--mova-ink-3)">Intelligent Multilingual Language Learning System</p>
+    <div style="text-align:center;padding:32px 0 16px">
+      <h1 style="color:var(--mova-ink);font-weight:700;margin:0 0 2px;font-size:2rem">{cfg['label']}</h1>
     </div>""", unsafe_allow_html=True)
+
+    _setup_img_name = "vocab_basic.png" if module == "vocab" else "vocab_school.png"
+    _setup_img = APP_IMG_DIR / _setup_img_name
+    if _setup_img.exists():
+        _, _mid, _ = st.columns([1, 2, 1])
+        with _mid:
+            st.image(str(_setup_img), use_container_width=True)
 
     db_path = cfg["db_path"]
     if not db_path.exists():

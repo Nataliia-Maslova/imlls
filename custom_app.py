@@ -249,10 +249,8 @@ def render_setup():
             st.rerun()
 
     st.markdown(f"""
-    <div style="text-align:center;padding:36px 0 18px">
-      <div style="font-size:3rem">📝</div>
-      <h1 style="color:var(--mova-ink);font-weight:600;margin:8px 0 4px">{_t("title")}</h1>
-      <p style="color:var(--mova-ink-3)">{_t("subtitle")}</p>
+    <div style="text-align:center;padding:32px 0 16px">
+      <h1 style="color:var(--mova-ink);font-weight:700;margin:0;font-size:2rem">{_t("title")}</h1>
     </div>
     """, unsafe_allow_html=True)
 
@@ -347,7 +345,7 @@ def render_setup():
                         ):
                             _start_lesson(user_id, _cu_lid, native, target, _cu_lp)
 
-        # ── Manage lessons (edit / delete) ────────────────────────────────────
+        # ── Manage lessons (edit / delete) ──────────────────────────────────────
         with st.expander(_t("manage_lessons"), expanded=False):
             for _, row in lessons_df.iterrows():
                 lid = int(row["lesson_id"])
@@ -404,7 +402,7 @@ def render_setup():
                             st.session_state.pop(f"cu_del_confirm_{lid}", None)
                             st.rerun()
 
-    # ── Create new lesson ─────────────────────────────────────────────────
+    # ── Create new lesson ────────────────────────────────────────
     st.markdown("---")
     with st.expander(_t("create_expander"), expanded=lessons_df.empty):
         lesson_name = st.text_input(_t("lesson_name"),
@@ -419,7 +417,6 @@ def render_setup():
             placeholder=_t("pairs_ph", native=native, target=target),
         )
 
-        # Live preview of what will be saved
         pairs = parse_pairs_text(text, sep="=")
         if pairs:
             st.caption(_t("recognized", n=len(pairs)))
@@ -496,9 +493,6 @@ def _start_lesson(user_id: str, lesson_id: int,
 
 def main():
     st.session_state["practice_module"] = "custom"
-    # Delegate to grammar_app which handles the full flow:
-    #   - no lesson_step → calls custom_app.render_setup() (lesson picker)
-    #   - lesson_step set → renders the 8-step lesson with sidebar navigation
     grammar_app.main(module="custom")
 
 

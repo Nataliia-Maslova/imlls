@@ -1455,11 +1455,9 @@ def render_setup():
         except Exception:
             st.query_params.clear()
 
-    st.markdown(f"""
-    <div style="text-align:center;padding:36px 0 20px">
-      <div style="font-size:3rem">📖</div>
-      <h1 style="color:var(--mova-ink);font-weight:600;margin:10px 0 4px">Reading Practice</h1>
-      <p style="color:var(--mova-ink-3)">{_ui("subtitle")}</p>
+    st.markdown("""
+    <div style="text-align:center;padding:32px 0 16px">
+      <h1 style="color:var(--mova-ink);font-weight:700;margin:0;font-size:2rem">Reading Practice</h1>
     </div>""", unsafe_allow_html=True)
 
     _reading_banner = APP_IMG_DIR / "reading_banner.png"
