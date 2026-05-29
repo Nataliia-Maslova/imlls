@@ -66,14 +66,6 @@ def _show_vocab_image(topic: str):
         st.image(str(p), use_container_width=True)
 
 
-@st.cache_data(show_spinner=False)
-def _lesson_img_b64(lesson_id: int) -> str | None:
-    """Return base64 data-URL for a lesson illustration, or None if missing."""
-    p = LESSON_IMG_DIR / f"lesson_{lesson_id:03d}.png"
-    if not p.exists():
-        return None
-    return "data:image/png;base64," + base64.b64encode(p.read_bytes()).decode()
-
 def _show_lesson_image(lesson_id: int, max_width_px: int = 340):
     """Show centered lesson illustration if the file exists."""
     p = LESSON_IMG_DIR / f"lesson_{lesson_id:03d}.png"

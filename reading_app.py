@@ -744,6 +744,7 @@ REQUIRED = {1, 2, 3}
 # ── UI strings per native language ────────────────────────────────────────
 READING_UI = {
     "Ukrainian": {
+        "setup_title": "Читання",
         "step1": "Слухай і повторюй",
         "step1_icon": "🎧",
         "step1_hint": "🎧 Слухай → ⏸ пауза → 🎤 повтори кожну фразу.",
@@ -778,7 +779,6 @@ READING_UI = {
         "step_word":       "Крок",
         "jump_lesson":     "Перейти до уроку",
         "nav_title":       "Навігація між кроками",
-        "step2_hint":      "Запиши себе вголос і перевір вимову.",
         "record_first":    "Спочатку запиши аудіо!",
         "transcribing":    "Розпізнаємо мовлення...",
         "checking":        "Перевіряємо вимову...",
@@ -798,6 +798,7 @@ READING_UI = {
         "try_first":       "Спочатку виконай завдання",
     },
     "English": {
+        "setup_title": "Reading Practice",
         "step1": "Listen & Repeat",
         "step1_icon": "🎧",
         "step1_hint": "🎧 Listen → ⏸ pause → 🎤 repeat each phrase.",
@@ -832,7 +833,6 @@ READING_UI = {
         "step_word":       "Step",
         "jump_lesson":     "Jump to lesson",
         "nav_title":       "Step navigation",
-        "step2_hint":      "Record yourself and check your pronunciation.",
         "record_first":    "Record audio first!",
         "transcribing":    "Transcribing...",
         "checking":        "Checking pronunciation...",
@@ -852,6 +852,7 @@ READING_UI = {
         "try_first":       "Complete the exercise first",
     },
     "Spanish": {
+        "setup_title": "Práctica de lectura",
         "step1": "Escucha y repite",
         "step1_icon": "🎧",
         "step1_hint": "🎧 Escucha → ⏸ pausa → 🎤 repite cada frase.",
@@ -886,7 +887,6 @@ READING_UI = {
         "step_word":       "Paso",
         "jump_lesson":     "Saltar a lección",
         "nav_title":       "Navegación de pasos",
-        "step2_hint":      "Grábate y verifica tu pronunciación.",
         "record_first":    "¡Graba audio primero!",
         "transcribing":    "Transcribiendo...",
         "checking":        "Verificando pronunciación...",
@@ -906,6 +906,7 @@ READING_UI = {
         "try_first":       "Primero completa el ejercicio",
     },
     "Korean": {
+        "setup_title": "읽기 연습",
         "step1": "듣고 따라 말하기",
         "step1_icon": "🎧",
         "step1_hint": "🎧 듣기 → ⏸ 일시정지 → 🎤 각 문장 따라 말하기.",
@@ -940,7 +941,6 @@ READING_UI = {
         "step_word":       "단계",
         "jump_lesson":     "수업으로 이동",
         "nav_title":       "단계 탐색",
-        "step2_hint":      "녹음하여 발음을 확인하세요.",
         "record_first":    "먼저 오디오를 녹음하세요!",
         "transcribing":    "전사 중...",
         "checking":        "발음 확인 중...",
@@ -1455,9 +1455,10 @@ def render_setup():
         except Exception:
             st.query_params.clear()
 
-    st.markdown("""
+    _setup_title = _ui("setup_title")
+    st.markdown(f"""
     <div style="text-align:center;padding:32px 0 16px">
-      <h1 style="color:var(--mova-ink);font-weight:700;margin:0;font-size:2rem">Reading Practice</h1>
+      <h1 style="color:var(--mova-ink);font-weight:700;margin:0;font-size:2rem">{_setup_title}</h1>
     </div>""", unsafe_allow_html=True)
 
     _reading_banner = APP_IMG_DIR / "reading_banner.png"
@@ -1933,10 +1934,28 @@ def main():
 
     else:
         # -- Render lesson step (1-5) --
-        fn = STEP_FNS.get(step)
-        if fn:
-            done = fn(rows)
-            if done:
-                clear_step_state()
-                st.session_state["r_step"] = step + 1
-                st.rerun()
+        # Show any pending toast notifications
+        for _msg in st.session_state.pop("_pending_r_toasts", []):
+            st.toast(_msg)
+
+        if step == 1:
+            done = do_step1(rows)
+        elif step == 2:
+            done = do_step2(rows)
+        elif step == 3:
+            done = do_step3(rows)
+        elif step == 4:
+            done = do_step4(rows)
+        elif step == 5:
+            done = do_step5(rows)
+        else:
+            done = False
+
+        if done:
+            clear_step_state()
+            st.session_state["r_step"] = step + 1
+            st.rerun()
+
+
+if __name__ == "__main__":
+    main()
