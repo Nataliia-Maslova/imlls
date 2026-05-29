@@ -552,6 +552,16 @@ def _try_first_msg(session: "LessonSession") -> str:
     return i18n.get(native_lang, "try_first")
 
 
+def _lock_hint(session: "LessonSession"):
+    """Render a visible mobile-friendly hint when the Next button is locked."""
+    msg = _try_first_msg(session)
+    st.markdown(
+        f'<div style="color:var(--mova-amber-ink);font-size:.78rem;'
+        f'text-align:center;margin:-6px 0 10px;opacity:.9">🔒 {msg}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def step_hdr(step, title=None, desc=None, total=8, show_image=False):
     """Render the step header.
 
@@ -717,6 +727,8 @@ def step1(session: LessonSession, tts_lang, wh_lang):
                  help=None if attempted else _try_first_msg(session)):
         st.session_state.pop("s1_char_shown", None)
         return True
+    if not attempted:
+        _lock_hint(session)
     return False
 
 
@@ -748,6 +760,8 @@ def step2(session: LessonSession, tts_lang, wh_lang):
         st.session_state.pop("s2_active", None)
         st.session_state.pop("s2_attempted", None)
         return True
+    if not attempted:
+        _lock_hint(session)
     return False
 
 
@@ -864,6 +878,8 @@ def step4(session: LessonSession, tts_lang, wh_lang):
                  help=None if attempted else _try_first_msg(session)):
         st.session_state.pop("s4_result", None)
         return True
+    if not attempted:
+        _lock_hint(session)
     return False
 
 
@@ -895,6 +911,8 @@ def step5(session: LessonSession, tts_lang, wh_lang):
         st.session_state.pop("s5_active", None)
         st.session_state.pop("s5_attempted", None)
         return True
+    if not attempted:
+        _lock_hint(session)
     return False
 
 
@@ -935,6 +953,8 @@ def step6(session: LessonSession, tts_lang, wh_lang):
         st.session_state["s6_idx"] = 0
         st.session_state.pop("s6_char_shown", None)
         return True
+    if not attempted:
+        _lock_hint(session)
     return False
 
 
@@ -1487,6 +1507,8 @@ def step8(session: LessonSession, tts_lang, wh_lang):
                      help=None if attempted else _try_first_msg(session)):
             st.session_state.pop("s8_results", None)
             return True
+    if not attempted:
+        _lock_hint(session)
     return False
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1993,7 +2015,7 @@ def main(module: str = "grammar"):
                         f"{_gres['level_name']}! +{_gres['xp_earned']} XP"
                     )
                 for _bid, _bem, _bname, _bdesc in _gres.get("new_badges", []):
-                    _toasts.append(f"{_bem} \u0411\u0435\u0439\u0434\u0436 \u00ab{_bname}\u00bb: {_bdesc}!")
+                    _toasts.append(f"{_bem} \u0411\u0435\u0439\u0434\u0436 \xab{_bname}\xbb: {_bdesc}!")
                 if not _gres.get("leveled_up") and not _gres.get("new_badges"):
                     _toasts.append(f"\u2b50 +{_gres['xp_earned']} XP")
                 st.session_state["_pending_toasts"] = (

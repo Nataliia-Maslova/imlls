@@ -1084,6 +1084,12 @@ def do_step2(rows: pd.DataFrame) -> bool:
                  disabled=not attempted,
                  help=None if attempted else _ui("try_first")):
         return True
+    if not attempted:
+        st.markdown(
+            f'<div style="color:var(--mova-amber-ink);font-size:.78rem;'
+            f'text-align:center;margin:-6px 0 10px;opacity:.9">🔒 {_ui("try_first")}</div>',
+            unsafe_allow_html=True,
+        )
     return False
 
 
