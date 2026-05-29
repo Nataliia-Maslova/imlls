@@ -57,6 +57,7 @@ STRINGS = {
         "step_label": "STEP",
         "required":   "required",
         "try_first":  "Complete the exercise first",
+        "main_menu":  "🏠 Main menu",
         "titles": {
             1: "Read out loud",
             2: "Listen, then repeat",
@@ -82,6 +83,7 @@ STRINGS = {
         "step_label": "КРОК",
         "required":   "обов'язковий",
         "try_first":  "Спочатку виконай завдання",
+        "main_menu":  "🏠 Головне меню",
         "titles": {
             1: "Прочитай уголос",
             2: "Слухай і повторюй",
@@ -107,6 +109,7 @@ STRINGS = {
         "step_label": "PASO",
         "required":   "obligatorio",
         "try_first":  "Primero completa el ejercicio",
+        "main_menu":  "🏠 Menú principal",
         "titles": {
             1: "Lee en voz alta",
             2: "Escucha y repite",
@@ -132,6 +135,7 @@ STRINGS = {
         "step_label": "단계",
         "required":   "필수",
         "try_first":  "먼저 연습을 완료하세요",
+        "main_menu":  "🏠 메인 메뉴",
         "titles": {
             1: "소리내어 읽기",
             2: "듣고 따라 말하기",

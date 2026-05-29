@@ -1428,7 +1428,7 @@ def render_setup():
         except Exception:
             pass
         st.markdown("---")
-        if st.button("🏠 Main menu", key="r_setup_home"):
+        if st.button(_ui("main_menu"), key="r_setup_home"):
             clear_all()
             st.rerun()
 
@@ -1694,7 +1694,7 @@ def main():
         )
         st.stop()
 
-    if "r_step" not in st.session_state:
+    if "r_step" not in st.session_state or "r_rows" not in st.session_state:
         render_setup()
         return
 
@@ -1912,7 +1912,7 @@ def main():
         _cols     = st.columns(_ncols)
 
         with _cols[0]:
-            if st.button("\U0001f504 Повторити", type="primary", use_container_width=True):
+            if st.button(_ui("nav_repeat"), type="primary", use_container_width=True):
                 clear_step_state()
                 st.session_state["r_step"] = 1
                 st.session_state.pop("_r_progress_saved", None)

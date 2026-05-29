@@ -1969,7 +1969,9 @@ def main(module: str = "grammar"):
                     pass
 
             st.markdown("---")
-            if st.button("\U0001f3e0 Main menu", use_container_width=True, key="sb_home"):
+            _sb_native = st.session_state.get("launcher_native", "English")
+            _mm_label  = i18n.get(_sb_native, "main_menu")
+            if st.button(_mm_label, use_container_width=True, key="sb_home"):
                 _clear_all()
                 st.rerun()
 
@@ -2030,7 +2032,6 @@ def main(module: str = "grammar"):
                 st.session_state["_adaptive_idx"] = _adp_idx + 1
             st.session_state["lesson_step"] = step + 1
             st.rerun()
-
 
 
 if __name__ == "__main__":
