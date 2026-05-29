@@ -796,6 +796,7 @@ READING_UI = {
         "resume_next": '▶ Продовжуєш з уроку {next_lesson} (останній пройдений: {saved_lesson})',
         "resume_step": '⏯ Повернешся до уроку {saved_lesson} на крок {resume_step}',
         "try_first":       "Спочатку виконай завдання",
+        "main_menu":       "🏠 Головне меню",
     },
     "English": {
         "setup_title": "Reading Practice",
@@ -850,6 +851,7 @@ READING_UI = {
         "resume_next": '▶ Continue from Lesson {next_lesson} (last completed: {saved_lesson})',
         "resume_step": '⏯ Resume Lesson {saved_lesson} at Step {resume_step}',
         "try_first":       "Complete the exercise first",
+        "main_menu":       "🏠 Main menu",
     },
     "Spanish": {
         "setup_title": "Práctica de lectura",
@@ -904,6 +906,7 @@ READING_UI = {
         "resume_next": '▶ Continuar desde Lección {next_lesson} (última completada: {saved_lesson})',
         "resume_step": '⏯ Retomar Lección {saved_lesson} en el Paso {resume_step}',
         "try_first":       "Primero completa el ejercicio",
+        "main_menu":       "🏠 Menú principal",
     },
     "Korean": {
         "setup_title": "읽기 연습",
@@ -958,6 +961,7 @@ READING_UI = {
         "resume_next": '▶ 수업 {next_lesson}에서 계속 (마지막 완료: {saved_lesson})',
         "resume_step": '⏯ 수업 {saved_lesson} 단계 {resume_step}에서 재개',
         "try_first":       "먼저 연습을 완료하세요",
+        "main_menu":       "🏠 메인 메뉴",
     },
 }
 
@@ -1337,8 +1341,12 @@ def clear_step_state():
 
 
 def clear_all():
+    _keep = {k: st.session_state[k] for k in
+             ("launcher_user", "launcher_native", "launcher_target")
+             if k in st.session_state}
     for k in list(st.session_state):
         del st.session_state[k]
+    st.session_state.update(_keep)
     st.query_params.clear()
 
 
@@ -1421,9 +1429,7 @@ def render_setup():
             pass
         st.markdown("---")
         if st.button("🏠 Main menu", key="r_setup_home"):
-            for _k in list(st.session_state):
-                del st.session_state[_k]
-            st.query_params.clear()
+            clear_all()
             st.rerun()
 
 
@@ -1821,7 +1827,7 @@ def main():
                 st.rerun()
 
         st.markdown("---")
-        if st.button("🏠 Головне меню"):
+        if st.button(_ui("main_menu")):
             clear_all()
             st.rerun()
 

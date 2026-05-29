@@ -205,49 +205,6 @@ def render_setup():
             st.query_params.clear()
 
 
-    # ── Sidebar: always visible on setup screen ───────────────────────────────
-    _MODS = [
-        ("grammar", "🗣️", "Grammar"),
-        ("vocab",   "📖", "Vocabulary"),
-        ("reading", "🔤", "Reading"),
-        ("custom",  "📝", "My Phrases"),
-    ]
-    with st.sidebar:
-        st.markdown(
-            '<div style="font-size:.7rem;color:var(--mova-ink-3);'
-            'text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">'
-            f'{_t("module_label")}</div>',
-            unsafe_allow_html=True,
-        )
-        for _mk, _mi, _mn in _MODS:
-            _active = (_mk == "custom")
-            if st.button(
-                f"{_mi} {_mn}",
-                key=f"cu_sb_{_mk}",
-                use_container_width=True,
-                type="primary" if _active else "secondary",
-                disabled=_active,
-            ):
-                _u = st.session_state.get("launcher_user", "student1")
-                _n = st.session_state.get("launcher_native", "Ukrainian")
-                _tg = st.session_state.get("launcher_target", "English")
-                for _k in list(st.session_state):
-                    del st.session_state[_k]
-                st.session_state.update({
-                    "active_module":   _mk,
-                    "launcher_user":   _u,
-                    "launcher_native": _n,
-                    "launcher_target": _tg,
-                })
-                st.query_params["module"] = _mk
-                st.rerun()
-        st.markdown("---")
-        if st.button(_t("main_menu"), key="cu_setup_home"):
-            for _k in list(st.session_state):
-                del st.session_state[_k]
-            st.query_params.clear()
-            st.rerun()
-
     st.markdown(f"""
     <div style="text-align:center;padding:32px 0 16px">
       <h1 style="color:var(--mova-ink);font-weight:700;margin:0;font-size:2rem">{_t("title")}</h1>
@@ -485,14 +442,14 @@ def _start_lesson(user_id: str, lesson_id: int,
                                           language_pair=lang_pair),
         "lesson_step":     1,
         "tts_lang":        TTS_LANG.get(target, "en"),
-        "wh_lang":         WHISPER_LANG.get(target),
-        "lang_pair":       lang_pair,
+        "wh_lang":         WHISPER_LANG.get(target, "en"),
+        "active_module":   "custom",
     })
+    st.query_params["module"] = "custom"
     st.rerun()
 
 
 def main():
-    st.session_state["practice_module"] = "custom"
     grammar_app.main(module="custom")
 
 

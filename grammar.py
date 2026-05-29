@@ -1515,7 +1515,12 @@ def _clear_lesson():
             del st.session_state[k]
 
 def _clear_all():
-    for k in list(st.session_state): del st.session_state[k]
+    _keep = {k: st.session_state[k] for k in
+             ("launcher_user", "launcher_native", "launcher_target")
+             if k in st.session_state}
+    for k in list(st.session_state):
+        del st.session_state[k]
+    st.session_state.update(_keep)
     st.query_params.clear()
 
 
@@ -2025,6 +2030,7 @@ def main(module: str = "grammar"):
                 st.session_state["_adaptive_idx"] = _adp_idx + 1
             st.session_state["lesson_step"] = step + 1
             st.rerun()
+
 
 
 if __name__ == "__main__":
