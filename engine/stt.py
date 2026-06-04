@@ -6,18 +6,16 @@ import io
 import os
 import tempfile
 import numpy as np
+import streamlit as st
 
-_model = None
 _model_size = "base"   # change to "tiny" for faster CPU inference
 
 
+@st.cache_resource(show_spinner=False)
 def get_model():
-    """Lazy-load Whisper model (singleton)."""
-    global _model
-    if _model is None:
-        import whisper
-        _model = whisper.load_model(_model_size)
-    return _model
+    """Load Whisper model once per server process (shared across all sessions)."""
+    import whisper
+    return whisper.load_model(_model_size)
 
 
 def transcribe_bytes(audio_bytes: bytes, language: str | None = None) -> str:

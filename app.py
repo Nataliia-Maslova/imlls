@@ -132,7 +132,7 @@ MODULES = {
     "grammar": {
         "label":       "Grammar",
         "icon":        "🗣️",
-        "img":         str(APP_IMG_DIR / "vocab_school.png"),
+        "img":         str(APP_IMG_DIR / "vocab_school.jpg"),
         "tagline":     "Practice phrases - 8 steps with GEC correction",
         "color_from":  "var(--mova-card)",
         "color_to":    "var(--mova-card)",
@@ -140,7 +140,7 @@ MODULES = {
     "vocab": {
         "label":       "Vocabulary",
         "icon":        "📖",
-        "img":         str(APP_IMG_DIR / "vocab_basic.png"),
+        "img":         str(APP_IMG_DIR / "vocab_basic.jpg"),
         "tagline":     "Learn words by topic - Family, Food, Travel...",
         "color_from":  "var(--mova-card)",
         "color_to":    "var(--mova-card)",
@@ -148,7 +148,7 @@ MODULES = {
     "reading": {
         "label":       "Reading",
         "icon":        "🔤",
-        "img":         str(APP_IMG_DIR / "reading_banner.png"),
+        "img":         str(APP_IMG_DIR / "reading_banner.jpg"),
         "tagline":     "Learn to read with IPA audio",
         "color_from":  "var(--mova-card)",
         "color_to":    "var(--mova-card)",
@@ -156,7 +156,7 @@ MODULES = {
     "custom": {
         "label":       "My Phrases",
         "icon":        "📝",
-        "img":         str(APP_IMG_DIR / "my_phrases_banner.png"),
+        "img":         str(APP_IMG_DIR / "my_phrases_banner.jpg"),
         "tagline":     "Create your own lessons - same 8-step practice flow",
         "color_from":  "var(--mova-card)",
         "color_to":    "var(--mova-card)",

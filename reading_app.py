@@ -688,8 +688,8 @@ except Exception:
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
-html,body,[class*="css"]{font-family:'Inter',sans-serif;}
+/* Fonts loaded by app.py via _inject_mova_css — no extra @import needed */
+html,body,[class*="css"]{font-family:'Plus Jakarta Sans','Inter',sans-serif;}
 /* removed: was fighting Mova surface; theme is now driven by tokens.css */
 #MainMenu,footer{visibility:hidden;}
 /* Keep Streamlit's sidebar collapse/expand control reachable on every device,
@@ -995,7 +995,7 @@ def shdr(step: int):
         f'</div></div></div>',
         unsafe_allow_html=True,
     )
-    _banner = APP_IMG_DIR / "reading_banner.png"
+    _banner = APP_IMG_DIR / "reading_banner.jpg"
     if _banner.exists():
         _, _mid, _ = st.columns([1, 2, 1])
         with _mid:
@@ -1467,7 +1467,7 @@ def render_setup():
       <h1 style="color:var(--mova-ink);font-weight:700;margin:0;font-size:2rem">{_setup_title}</h1>
     </div>""", unsafe_allow_html=True)
 
-    _reading_banner = APP_IMG_DIR / "reading_banner.png"
+    _reading_banner = APP_IMG_DIR / "reading_banner.jpg"
     if _reading_banner.exists():
         _, _mid, _ = st.columns([1, 2, 1])
         with _mid:
@@ -1629,8 +1629,8 @@ def render_setup():
 def _inject_css():
     st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
-html,body,[class*="css"]{font-family:'Inter',sans-serif;}
+/* Fonts loaded by app.py via _inject_mova_css — no extra @import needed */
+html,body,[class*="css"]{font-family:'Plus Jakarta Sans','Inter',sans-serif;}
 /* removed: was fighting Mova surface; theme is now driven by tokens.css */
 #MainMenu,footer{visibility:hidden;}
 .step-header{background:var(--mova-card);border:1px solid var(--mova-line);border-left:4px solid var(--mova-indigo);border-radius:14px;padding:18px 26px;margin-bottom:18px;}

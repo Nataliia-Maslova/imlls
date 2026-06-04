@@ -13,18 +13,16 @@ Fixes vs previous version:
 from __future__ import annotations
 import re
 import numpy as np
+import streamlit as st
 
-# ── Lazy singletons ───────────────────────────────────────────────────────
-_st_model   = None
 _nltk_ready = False
 
 
+@st.cache_resource(show_spinner=False)
 def _load_st_model():
-    global _st_model
-    if _st_model is None:
-        from sentence_transformers import SentenceTransformer
-        _st_model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
-    return _st_model
+    """Load MiniLM model once per server process (shared across all sessions)."""
+    from sentence_transformers import SentenceTransformer
+    return SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
 
 def _ensure_nltk():

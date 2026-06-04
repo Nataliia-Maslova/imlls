@@ -425,7 +425,7 @@ def _render_wave_plotly(
     # ── Lesson preview card (grammar only) ───────────────────────────────────
     if show_lesson_image:
         preview_lid = clicked_lid if clicked_lid is not None else default_lid
-        preview_img = LESSON_IMG_DIR / f"lesson_{preview_lid:03d}.png"
+        preview_img = LESSON_IMG_DIR / f"lesson_{preview_lid:03d}.jpg"
         preview_name = lesson_names.get(preview_lid, f"Lesson {preview_lid}")
         if preview_img.exists():
             col_l, col_m, col_r = st.columns([2, 1, 2])

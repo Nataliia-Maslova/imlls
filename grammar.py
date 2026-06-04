@@ -58,7 +58,7 @@ def _show_vocab_image(topic: str):
     slug = _TOPIC_SLUG.get(topic)
     if not slug:
         return
-    p = APP_IMG_DIR / f"vocab_{slug}.png"
+    p = APP_IMG_DIR / f"vocab_{slug}.jpg"
     if not p.exists():
         return
     _, mid, _ = st.columns([1, 2, 1])
@@ -68,7 +68,7 @@ def _show_vocab_image(topic: str):
 
 def _show_lesson_image(lesson_id: int, max_width_px: int = 340):
     """Show centered lesson illustration if the file exists."""
-    p = LESSON_IMG_DIR / f"lesson_{lesson_id:03d}.png"
+    p = LESSON_IMG_DIR / f"lesson_{lesson_id:03d}.jpg"
     if not p.exists():
         return
     # Center by putting image in a middle column
@@ -640,7 +640,7 @@ def step_hdr(step, title=None, desc=None, total=8, show_image=False):
         elif _mod == "grammar":
             _show_lesson_image(sess.state.lesson_id)
         elif _mod == "custom":
-            _p = APP_IMG_DIR / "my_phrases_banner.png"
+            _p = APP_IMG_DIR / "my_phrases_banner.jpg"
             if _p.exists():
                 _, _mid, _ = st.columns([1, 2, 1])
                 with _mid:
@@ -966,8 +966,7 @@ def step7(session: LessonSession, tts_lang, wh_lang):
     total_words = sum(len(p["target"].split()) for p in phrases)
     max_seconds = max(1, round(total_words / 2 * _S7_SECONDS_PER_TWO_WORDS))
     st.caption(
-        f"Pass target: **≤ {max_seconds}s** "
-        f"({total_words} target words · 1 sec per 2 words) "
+        f"Time: **≤ {max_seconds}s** "
         f"and **≥ {int(_S7_MIN_SIMILARITY*100)}%** accuracy."
     )
 
@@ -1180,7 +1179,7 @@ def render_setup():
       <h1 style="color:var(--mova-ink);font-weight:700;margin:0 0 2px;font-size:2rem">{cfg['label']}</h1>
     </div>""", unsafe_allow_html=True)
 
-    _setup_img_name = "vocab_basic.png" if module == "vocab" else "vocab_school.png"
+    _setup_img_name = "vocab_basic.jpg" if module == "vocab" else "vocab_school.jpg"
     _setup_img = APP_IMG_DIR / _setup_img_name
     if _setup_img.exists():
         _, _mid, _ = st.columns([1, 2, 1])
@@ -1547,8 +1546,8 @@ def _save_step_progress(sess: LessonSession, step: int):
 def _inject_css():
     st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
-html,body,[class*="css"]{font-family:'Inter',sans-serif;}
+/* Fonts loaded by app.py via _inject_mova_css — no extra @import needed */
+html,body,[class*="css"]{font-family:'Plus Jakarta Sans','Inter',sans-serif;}
 /* removed: was fighting Mova surface; theme is now driven by tokens.css */
 #MainMenu,footer{visibility:hidden;}
 /* Keep Streamlit's sidebar collapse/expand control reachable on every device,

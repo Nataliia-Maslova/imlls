@@ -211,7 +211,7 @@ def render_setup():
     </div>
     """, unsafe_allow_html=True)
 
-    _my_phrases_banner = APP_IMG_DIR / "my_phrases_banner.png"
+    _my_phrases_banner = APP_IMG_DIR / "my_phrases_banner.jpg"
     if _my_phrases_banner.exists():
         _, _mid, _ = st.columns([1, 2, 1])
         with _mid:

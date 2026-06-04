@@ -68,14 +68,18 @@ def correct(text: str, lang: str = "en") -> str:
 
 
 def gec_available(lang: str = "en") -> bool:
-    """Check whether the GEC model for the given language can be loaded."""
+    """Check whether GEC is supported for this language.
+
+    Does NOT download the model — only verifies the language is registered
+    and the transformers package is installed.  The actual model is downloaded
+    lazily on the first call to correct().
+    """
     if lang not in MODELS:
         return False
     try:
-        _load(lang)
+        import transformers  # noqa — just confirm the package is present
         return True
-    except Exception as e:
-        print(f"[GEC:{lang}] Unavailable: {e}")
+    except ImportError:
         return False
 
 
