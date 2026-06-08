@@ -7,7 +7,7 @@
 
 IMLLS is a Streamlit-based language learning app that guides learners through an **8-step structured practice loop** with adaptive difficulty, speech recognition, grammatical error correction, and gamification. Supports English, Ukrainian, Spanish, and Korean.
 
-**Live demo:** [Streamlit Cloud](#) *(replace with your URL)*
+**Live demo:** [https://verbashake.streamlit.app/](#)
 
 ---
 
