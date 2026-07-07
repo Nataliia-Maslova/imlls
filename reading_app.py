@@ -85,18 +85,38 @@ KO_CONSONANTS = {
 
 # ── Multi-language TTS / Whisper config ───────────────────────────────────
 TTS_CONFIG = {
-    "en": {"voice": "en-US-JennyNeural", "gtts": "en"},
-    "uk": {"voice": "uk-UA-PolinaNeural", "gtts": "uk"},
-    "es": {"voice": "es-ES-ElviraNeural", "gtts": "es"},
-    "ko": {"voice": "ko-KR-SunHiNeural",  "gtts": "ko"},
+    "en": {"voice": "en-US-JennyNeural",        "gtts": "en"},
+    "uk": {"voice": "uk-UA-PolinaNeural",        "gtts": "uk"},
+    "es": {"voice": "es-ES-ElviraNeural",        "gtts": "es"},
+    "ko": {"voice": "ko-KR-SunHiNeural",         "gtts": "ko"},
+    "fr": {"voice": "fr-FR-DeniseNeural",        "gtts": "fr"},
+    "de": {"voice": "de-DE-KatjaNeural",         "gtts": "de"},
+    "ja": {"voice": "ja-JP-NanamiNeural",        "gtts": "ja"},
+    "zh": {"voice": "zh-CN-XiaoxiaoNeural",      "gtts": "zh-CN"},
+    "pt": {"voice": "pt-BR-FranciscaNeural",     "gtts": "pt"},
+    "it": {"voice": "it-IT-ElsaNeural",          "gtts": "it"},
+    "pl": {"voice": "pl-PL-ZofiaNeural",         "gtts": "pl"},
+    "ru": {"voice": "ru-RU-SvetlanaNeural",      "gtts": "ru"},
 }
 LANG_LABELS = {
     "en": "English 🇬🇧",
     "uk": "Українська 🇺🇦",
     "es": "Español 🇪🇸",
     "ko": "한국어 🇰🇷",
+    "fr": "Français 🇫🇷",
+    "de": "Deutsch 🇩🇪",
+    "ja": "日本語 🇯🇵",
+    "zh": "中文 🇨🇳",
+    "pt": "Português 🇧🇷",
+    "it": "Italiano 🇮🇹",
+    "pl": "Polski 🇵🇱",
+    "ru": "Русский 🇷🇺",
 }
-WHISPER_LANG = {"en": "en", "uk": "uk", "es": "es", "ko": "ko"}
+WHISPER_LANG = {
+    "en": "en", "uk": "uk", "es": "es", "ko": "ko",
+    "fr": "fr", "de": "de", "ja": "ja", "zh": "zh",
+    "pt": "pt", "it": "it", "pl": "pl", "ru": "ru",
+}
 
 # Native language → column name in «Правила» sheet (rules for English lessons)
 NATIVE_TO_RULES_COL = {
@@ -388,7 +408,10 @@ def audio_for_row(word: str, transcription: str, lesson_id=None, lang: str = Non
     """
     lang = lang or _r_lang()
 
-    w = word.strip()
+    word = "" if word is None else str(word).strip()
+    if word.lower() == "nan":
+        word = ""
+    w = word
 
     # ── Ukrainian ─────────────────────────────────────────────────────────
     if lang == "uk":
@@ -425,17 +448,30 @@ def audio_for_row(word: str, transcription: str, lesson_id=None, lang: str = Non
             p = PHONEMES_DIR_KO / f"{w}.ogg"
             if p.exists():
                 return p
-        # Everything else (vowels, syllables, words) → edge-tts Korean voice
-        trans = str(transcription).strip()
-        spoken_text = trans if (trans and trans.lower() != "nan") else w
-        spoken = re.sub(r"\s*[–—‐‑‒\-]\s*", ", ", spoken_text)
+        # Everything else — speak original Korean (Слово), transcription is display-only
+        spoken = re.sub(r"\s*[–—‐‑‒\-]\s*", ", ", w.strip())
         return audio_for_word(spoken, lang="ko")
 
-    # ── Other non-English ─────────────────────────────────────────────────────
+    # ── Japanese — speak the original kana/kanji (Слово), IPA is display-only ──
+    if lang == "ja":
+        spoken = re.sub(r"\s*[–—‐‑‒\-]\s*", ", ", w.strip())
+        return audio_for_word(spoken, lang="ja")
+
+    # ── Chinese — speak characters or clean pinyin from Слово ─────────────────
+    if lang == "zh":
+        cjk = re.findall(r"[\u4e00-\u9fff\u3400-\u4dbf]", w)
+        if cjk:
+            spoken = "".join(cjk)
+        elif "\u2192" in w or "->" in w:          # tone sandhi: "nǐ hǎo → ní hǎo"
+            spoken = w.split("\u2192")[-1].strip() if "\u2192" in w else w.split("->")[-1].strip()
+        else:
+            spoken = w.split()[0] if w.split() else w  # first token (pinyin)
+        return audio_for_word(spoken, lang="zh")
+
+    # ── Other non-English (fr, de, it, pl, ru, pt …) ────────────────────────
+    # TTS knows the pronunciation — speak the word directly; IPA is display-only.
     if lang != "en":
-        trans = str(transcription).strip()
-        spoken_text = trans if (trans and trans.lower() != "nan") else w.lower()
-        spoken = re.sub(r"\s*[–—‐‑‒\-]\s*", ", ", spoken_text)
+        spoken = re.sub(r"\s*[–—‐‑‒\-]\s*", ", ", w.strip())
         return audio_for_word(spoken, lang=lang)
 
     # English path — original logic
@@ -660,21 +696,25 @@ def load(path: str, lang: str = "en", native_lang: str = "Ukrainian") -> pd.Data
         except Exception as e:
             print(f"[load] rules merge failed: {e}")
             df["rule"] = df["rule"].fillna("").astype(str).str.strip()
-    elif lang == "ko":
-        df = df.iloc[:, :3]
-        df.columns = ["lesson_id", "row_id", "word"]
-        df["transcription"] = ""
-        df["rule"]          = ""
-    else:  # uk, es
+    elif lang in ("ko", "fr", "de", "ja", "zh", "pt", "it", "pl", "ru"):
+        # 5-column sheets: lesson_id, row_id, word, transcription, rule
+        df = df.iloc[:, :5]
+        df.columns = ["lesson_id", "row_id", "word", "transcription", "rule"]
+    else:  # uk, es — 4-column sheets (no rule column)
         df = df.iloc[:, :4]
         df.columns = ["lesson_id", "row_id", "word", "transcription"]
         df["rule"] = ""
 
     df["lesson_id"]     = pd.to_numeric(df["lesson_id"], errors="coerce").fillna(0).astype(int)
-    df["word"]          = df["word"].astype(str).str.strip()
+    df["word"]          = df["word"].astype(str).str.strip().replace("nan", "")
     df["transcription"] = df["transcription"].astype(str).str.strip().replace("nan", "")
     df["rule"]          = df["rule"].fillna("").astype(str).str.strip().replace("nan", "")
-    df = df[df["lesson_id"] > 0].reset_index(drop=True)
+    df = df[df["lesson_id"] > 0]
+    blank_words = df[df["word"] == ""]
+    if len(blank_words):
+        print(f"[load] dropping {len(blank_words)} row(s) with empty 'word' "
+              f"(lesson_id: {sorted(blank_words['lesson_id'].unique().tolist())})")
+    df = df[df["word"] != ""].reset_index(drop=True)
     return df
 
 
@@ -1186,7 +1226,7 @@ def do_step3(rows: pd.DataFrame) -> bool:
             with cols[ci % 2]:
                 if st.button(choice, key=f"s3_ch_{idx}_{ci}",
                              use_container_width=True):
-                    ok = choice.strip().lower() == row["word"].strip().lower()
+                    ok = str(choice).strip().lower() == str(row["word"]).strip().lower()
                     scores[idx] = ok
                     st.session_state["s3_scores"] = scores
                     st.session_state["s3_idx"]    = idx + 1

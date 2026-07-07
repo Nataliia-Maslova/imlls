@@ -490,3 +490,11 @@ timestamp,user_id,lesson_id,phrase_id,step,similarity,response_time_ms,attempts,
 2026-06-02T12:37:25.503528,student1,es-reading,1,0,2,0.5333,4019,1,0,reading
 2026-06-02T12:38:11.464801,student1,ko-reading,11,0,2,0.0,2700,1,0,reading
 2026-06-02T12:39:33.349170,student1,en-reading,1,0,2,0.32,2760,1,0,reading
+2026-06-11T11:49:18.082945,student1,uk-de-grammar,1,0,7,0.0,480,1,0,lesson
+2026-07-07T19:27:10.901470,student1,de-reading,30,0,2,0.8851,22440,1,1,reading
+2026-07-07T19:27:18.901111,student1,de-reading,30,191,3,1.0,0,1,1,reading
+2026-07-07T19:27:23.178885,student1,de-reading,30,192,3,1.0,0,1,1,reading
+2026-07-07T19:27:26.478680,student1,de-reading,30,193,3,1.0,0,1,1,reading
+2026-07-07T19:27:29.870142,student1,de-reading,30,194,3,1.0,0,1,1,reading
+2026-07-07T19:27:32.679160,student1,de-reading,30,195,3,1.0,0,1,1,reading
+2026-07-07T19:27:35.116965,student1,de-reading,30,196,3,1.0,0,1,1,reading

@@ -111,10 +111,14 @@ def _inject_mova_css() -> None:
     )
 
 
-LANGUAGES = ["English", "Ukrainian", "Spanish", "Korean"]
+LANGUAGES = [
+    "English", "Ukrainian", "Spanish", "Korean",
+    "French", "German", "Japanese", "Chinese",
+    "Portuguese", "Italian", "Polish", "Russian",
+]
 
 DB_GRAMMAR  = ROOT / "data" / "imlls_database.xlsx"
-DB_VOCAB    = ROOT / "data" / "vocabulary.xlsx"
+DB_VOCAB    = ROOT / "data" / "vocabulary_translated.xlsx"
 DB_READING  = ROOT / "data" / "reading_lessons.xlsx"
 APP_IMG_DIR = ROOT / "static" / "app_images"
 

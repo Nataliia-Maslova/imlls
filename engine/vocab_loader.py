@@ -28,10 +28,18 @@ import streamlit as st
 
 # Same language code mapping as engine/loader.py
 LANG_COLUMNS = {
-    "English":   "en",
-    "Ukrainian": "uk",
-    "Spanish":   "es",
-    "Korean":    "ko",
+    "English":    "en",
+    "Ukrainian":  "uk",
+    "Spanish":    "es",
+    "Korean":     "ko",
+    "French":     "fr",
+    "German":     "de",
+    "Japanese":   "ja",
+    "Chinese":    "zh",
+    "Portuguese": "pt",
+    "Italian":    "it",
+    "Polish":     "pl",
+    "Russian":    "ru",
 }
 
 

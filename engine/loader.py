@@ -11,22 +11,46 @@ LANG_COLUMNS = {
     "Ukrainian":  "uk",
     "Spanish":    "es",
     "Korean":     "ko",
+    "French":     "fr",
+    "German":     "de",
+    "Japanese":   "ja",
+    "Chinese":    "zh",
+    "Portuguese": "pt",
+    "Italian":    "it",
+    "Polish":     "pl",
+    "Russian":    "ru",
 }
 
 # Whisper language codes
 WHISPER_LANG = {
-    "English":   "en",
-    "Ukrainian": "uk",
-    "Spanish":   "es",
-    "Korean":    "ko",
+    "English":    "en",
+    "Ukrainian":  "uk",
+    "Spanish":    "es",
+    "Korean":     "ko",
+    "French":     "fr",
+    "German":     "de",
+    "Japanese":   "ja",
+    "Chinese":    "zh",
+    "Portuguese": "pt",
+    "Italian":    "it",
+    "Polish":     "pl",
+    "Russian":    "ru",
 }
 
 # gTTS language codes
 TTS_LANG = {
-    "English":   "en",
-    "Ukrainian": "uk",
-    "Spanish":   "es",
-    "Korean":    "ko",
+    "English":    "en",
+    "Ukrainian":  "uk",
+    "Spanish":    "es",
+    "Korean":     "ko",
+    "French":     "fr",
+    "German":     "de",
+    "Japanese":   "ja",
+    "Chinese":    "zh-CN",
+    "Portuguese": "pt",
+    "Italian":    "it",
+    "Polish":     "pl",
+    "Russian":    "ru",
 }
 
 

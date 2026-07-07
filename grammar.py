@@ -105,8 +105,12 @@ except Exception:
 DB_PATH_TITLED = ROOT / "data" / "imlls_database_with_titles.xlsx"
 DB_PATH_PLAIN  = ROOT / "data" / "imlls_database.xlsx"
 DB_PATH        = DB_PATH_TITLED if DB_PATH_TITLED.exists() else DB_PATH_PLAIN
-VOCAB_DB_PATH  = ROOT / "data" / "vocabulary.xlsx"
-LANGUAGES      = ["English", "Ukrainian", "Spanish", "Korean"]
+VOCAB_DB_PATH  = ROOT / "data" / "vocabulary_translated.xlsx"
+LANGUAGES      = [
+    "English", "Ukrainian", "Spanish", "Korean",
+    "French", "German", "Japanese", "Chinese",
+    "Portuguese", "Italian", "Polish", "Russian",
+]
 
 # st.set_page_config is set up by main_app.py when used as a launcher.
 # When this file is run directly, set it here too.
@@ -1092,7 +1096,7 @@ def render_complete(session: LessonSession):
         session.complete()
         st.session_state["_progress_saved"] = True
         try:
-            _llang = {"English":"en","Ukrainian":"uk","Spanish":"es","Korean":"ko"}.get(
+            _llang = {"English":"en","Ukrainian":"uk","Spanish":"es","Korean":"ko","French":"fr","German":"de","Japanese":"ja","Chinese":"zh","Portuguese":"pt","Italian":"it","Polish":"pl","Russian":"ru"}.get(
                 st.session_state.get("launcher_native","English"), "en")
             _lres  = on_lesson_complete(session.state.user_id, _llang)
             _ltoasts = [f"🎉 Урок завершено! +{_lres['xp_earned']} XP бонус"]
