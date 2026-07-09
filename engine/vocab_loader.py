@@ -40,6 +40,8 @@ LANG_COLUMNS = {
     "Italian":    "it",
     "Polish":     "pl",
     "Russian":    "ru",
+    "Valencian":  "ca",
+    "Dutch":      "nl",
 }
 
 

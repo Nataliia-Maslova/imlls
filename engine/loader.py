@@ -19,6 +19,8 @@ LANG_COLUMNS = {
     "Italian":    "it",
     "Polish":     "pl",
     "Russian":    "ru",
+    "Valencian":  "ca",
+    "Dutch":      "nl",
 }
 
 # Whisper language codes
@@ -35,6 +37,8 @@ WHISPER_LANG = {
     "Italian":    "it",
     "Polish":     "pl",
     "Russian":    "ru",
+    "Valencian":  "ca",
+    "Dutch":      "nl",
 }
 
 # gTTS language codes
@@ -51,6 +55,8 @@ TTS_LANG = {
     "Italian":    "it",
     "Polish":     "pl",
     "Russian":    "ru",
+    "Valencian":  "ca",
+    "Dutch":      "nl",
 }
 
 
@@ -79,7 +85,10 @@ def load_phrases(db_path: str, native_lang: str, target_lang: str) -> pd.DataFra
     df = df[mask].copy()
 
     keep = ["lesson_id", "phrase_id", "difficulty", native_col, target_col]
-    for opt in ("topic_en", "topic_uk", "topic_es", "topic_ko"):
+    for opt in ("topic_en", "topic_uk", "topic_es", "topic_ko",
+                "topic_fr", "topic_de", "topic_ja", "topic_zh",
+                "topic_pt", "topic_it", "topic_pl", "topic_ru",
+                "topic_ca", "topic_nl"):
         if opt in df.columns:
             keep.append(opt)
     result = df[keep].copy()
@@ -97,10 +106,20 @@ def get_available_lessons(df: pd.DataFrame) -> list[int]:
 
 
 _TOPIC_COL_FOR_LANG = {
-    "English":   "topic_en",
-    "Ukrainian": "topic_uk",
-    "Spanish":   "topic_es",
-    "Korean":    "topic_ko",
+    "English":    "topic_en",
+    "Ukrainian":  "topic_uk",
+    "Spanish":    "topic_es",
+    "Korean":     "topic_ko",
+    "French":     "topic_fr",
+    "German":     "topic_de",
+    "Japanese":   "topic_ja",
+    "Chinese":    "topic_zh",
+    "Portuguese": "topic_pt",
+    "Italian":    "topic_it",
+    "Polish":     "topic_pl",
+    "Russian":    "topic_ru",
+    "Valencian":  "topic_ca",
+    "Dutch":      "topic_nl",
 }
 
 

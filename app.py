@@ -115,6 +115,7 @@ LANGUAGES = [
     "English", "Ukrainian", "Spanish", "Korean",
     "French", "German", "Japanese", "Chinese",
     "Portuguese", "Italian", "Polish", "Russian",
+    "Valencian", "Dutch",
 ]
 
 DB_GRAMMAR  = ROOT / "data" / "imlls_database.xlsx"

@@ -110,6 +110,7 @@ LANGUAGES      = [
     "English", "Ukrainian", "Spanish", "Korean",
     "French", "German", "Japanese", "Chinese",
     "Portuguese", "Italian", "Polish", "Russian",
+    "Valencian", "Dutch",
 ]
 
 # st.set_page_config is set up by main_app.py when used as a launcher.
